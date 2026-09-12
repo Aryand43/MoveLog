@@ -10,10 +10,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useStore } from "@/lib/store";
-import { CREW, MOVE } from "@/lib/demo-data";
+import { moveDisplay } from "@/lib/derive";
 
 export function TopBar() {
   const { state, dispatch } = useStore();
+  const move = moveDisplay(state.move, state.counts);
   const [menu, setMenu] = React.useState(false);
   const online = state.connection === "online";
 
@@ -38,30 +39,27 @@ export function TopBar() {
       </Dialog>
 
       <div className="flex min-w-0 items-baseline gap-2">
-        <span className="tabular text-sm font-semibold">{MOVE.id}</span>
-        <span className="hidden truncate text-sm text-muted-foreground sm:inline">{MOVE.name}</span>
+        <span className="tabular text-sm font-semibold">{move.id}</span>
+        <span className="hidden truncate text-sm text-muted-foreground sm:inline">{move.name}</span>
       </div>
 
       <Separator orientation="vertical" className="hidden h-6 sm:block" />
 
-      <div className="hidden items-center gap-2 sm:flex" aria-label="Crew on site">
-        <div className="flex -space-x-2">
-          {CREW.map((c) => (
-            <span
-              key={c.initials}
-              title={`${c.name}, ${c.role}${c.online ? "" : " (offline)"}`}
-              className={`grid size-7 place-items-center rounded-full border-2 border-background text-[11px] font-semibold ${
-                c.online ? "bg-primary/15 text-primary" : "bg-secondary text-muted-foreground"
-              }`}
-            >
-              {c.initials}
-            </span>
+      <label className="hidden items-center gap-2 sm:flex">
+        <span className="text-xs text-muted-foreground">Move</span>
+        <select
+          aria-label="Select move"
+          value={state.moveId}
+          onChange={(e) => dispatch({ type: "move/select", id: e.target.value })}
+          className="rounded-md border bg-background px-2 py-1 text-sm"
+        >
+          {state.moves.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.id} — {m.customer}
+            </option>
           ))}
-        </div>
-        <span className="text-xs text-muted-foreground">
-          {CREW.filter((c) => c.online).length} of {CREW.length} on site
-        </span>
-      </div>
+        </select>
+      </label>
 
       <div className="ml-auto flex items-center gap-2">
         <Button

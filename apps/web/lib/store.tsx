@@ -1,342 +1,208 @@
 "use client";
 
 import * as React from "react";
+import { API } from "./api";
 import {
-  BOXES, CREW, INITIAL_DISCREPANCY, INITIAL_FEED, INITIAL_REPLY, INITIAL_TRANSCRIPT,
-  MOVE, OPS_CHANNEL, ROOMS, VOICE_SCRIPT,
-  type Box, type Connection, type Discrepancy, type FeedEvent, type OpsNotification, type VoiceStatus,
-} from "./demo-data";
+  OPS_CHANNEL,
+  type Box, type Connection, type ConsolePayload, type Counts, type Discrepancy,
+  type FeedEvent, type MoveDetail, type MoveSummary, type OpsNotification, type VoiceState,
+} from "./model";
 
 /**
- * All console state lives here. No backend and no persistence, so a reload restores
- * the scripted starting point, which is what you want for a repeatable demo.
- *
- * Time is a counter, not `Date.now()`. Every timestamp is derived from
- * `clockMinutes`, so the server and client render identical markup and the
- * demo tells the same story every run.
+ * Live console state. Everything here comes from the backend on a 2s poll, so
+ * what ops see is what the packer actually said and what ClickHouse actually
+ * holds — no local simulation, and nothing that survives a reload except what
+ * the server knows.
  */
 
-const START_MINUTES = 10 * 60 + 7; // 10:07
-
-function stamp(minutes: number) {
-  const h = Math.floor(minutes / 60) % 24;
-  const m = minutes % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
+const POLL_MS = 2_000;
 
 export interface State {
   hydrating: boolean;
   connection: Connection;
-  clockMinutes: number;
-  seq: number;
-  voice: { status: VoiceStatus; transcript: string; reply: string; at: string };
-  scriptIndex: number;
+  moveId: string;
+  moves: MoveSummary[];
+  move: MoveDetail | null;
+  counts: Counts;
+  voice: VoiceState;
   boxes: Box[];
-  feed: FeedEvent[];
   discrepancies: Discrepancy[];
+  feed: FeedEvent[];
   notifications: OpsNotification[];
   toast: { id: string; text: string; tone: "default" | "success" | "warning" } | null;
-  past: Omit<State, "past">[];
+  /** Retained so existing components compile; live data has no undo history. */
+  past: never[];
 }
 
-const base: Omit<State, "past"> = {
+const EMPTY_COUNTS: Counts = { boxesClosed: 0, boxesOpen: 0, items: 0, openDiscrepancies: 0 };
+
+export const initialState: State = {
   hydrating: true,
   connection: "online",
-  clockMinutes: START_MINUTES,
-  seq: 0,
-  voice: { status: "idle", transcript: INITIAL_TRANSCRIPT, reply: INITIAL_REPLY, at: "09:47" },
-  scriptIndex: 0,
-  boxes: BOXES,
-  feed: INITIAL_FEED,
-  discrepancies: [INITIAL_DISCREPANCY],
-  notifications: [
-    {
-      id: "n-1",
-      at: "09:50",
-      channel: OPS_CHANNEL,
-      title: "Discrepancy raised on MV-2291",
-      body: "Scratch found on coffee machine (Box 14, Kitchen). Awaiting review.",
-      status: "sent",
-    },
-  ],
+  moveId: "",
+  moves: [],
+  move: null,
+  counts: EMPTY_COUNTS,
+  voice: { status: "offline", transcript: "", reply: "", at: "" },
+  boxes: [],
+  discrepancies: [],
+  feed: [],
+  notifications: [],
   toast: null,
+  past: [],
 };
 
-export const initialState: State = { ...base, past: [] };
-
 type Action =
-  | { type: "hydrated" }
-  | { type: "voice/start" }
-  | { type: "voice/result" }
-  | { type: "photo" }
-  | { type: "review" }
-  | { type: "undo" }
-  | { type: "discrepancy/resolve"; id: string; decision: "confirmed" | "pre_existing" | "awaiting_photo" }
+  | { type: "moves"; moves: MoveSummary[] }
+  | { type: "move/select"; id: string }
+  | { type: "data"; payload: ConsolePayload }
   | { type: "connection"; value: Connection }
+  | { type: "toast"; text: string; tone?: "default" | "success" | "warning" }
   | { type: "toast/clear" };
 
-/** Snapshot for undo. The toast and transient flags never enter history. */
-function snapshot(s: State): Omit<State, "past"> {
-  const { past: _past, ...rest } = s;
-  return { ...rest, toast: null };
+/**
+ * What ops were told, derived from what actually happened. A card is posted to
+ * the group when a discrepancy is assessed, so these mirror that rather than
+ * inventing a notification feed.
+ */
+function notificationsFrom(discrepancies: Discrepancy[], moveId: string): OpsNotification[] {
+  return discrepancies
+    .filter((d) => d.assessment !== null)
+    .slice(0, 8)
+    .map((d) => ({
+      id: `n-${d.id}`,
+      at: d.reportedAt,
+      channel: OPS_CHANNEL,
+      title: `${d.item} — ${d.assessment?.severity ?? ""} ${d.assessment?.damageType ?? ""}`.trim(),
+      body: d.decidedBy
+        ? `Decided by ${d.decidedBy} on ${moveId}.`
+        : `Awaiting a decision on ${moveId}.`,
+      status: "sent" as const,
+    }));
 }
 
-function withEvent(s: State, minutes: number, e: Omit<FeedEvent, "id" | "at">): FeedEvent[] {
-  return [{ id: `ev-${s.seq}`, at: stamp(minutes), ...e }, ...s.feed];
-}
-
-export function reducer(state: State, action: Action): State {
+function reducer(state: State, action: Action): State {
   switch (action.type) {
-    case "hydrated":
-      return { ...state, hydrating: false };
+    case "moves":
+      return {
+        ...state,
+        moves: action.moves,
+        // Fall back to the first move so a fresh load always shows something.
+        moveId: state.moveId || action.moves[0]?.id || "",
+      };
+
+    case "move/select":
+      return { ...state, moveId: action.id, hydrating: true };
+
+    case "data":
+      return {
+        ...state,
+        hydrating: false,
+        connection: "online",
+        move: action.payload.move,
+        counts: action.payload.counts,
+        voice: action.payload.voice,
+        boxes: action.payload.boxes,
+        discrepancies: action.payload.discrepancies,
+        feed: action.payload.feed,
+        notifications: notificationsFrom(action.payload.discrepancies, action.payload.move.id),
+      };
 
     case "connection":
       return { ...state, connection: action.value };
 
+    case "toast":
+      return {
+        ...state,
+        toast: { id: `t-${Date.now()}`, text: action.text, tone: action.tone ?? "default" },
+      };
+
     case "toast/clear":
       return { ...state, toast: null };
-
-    case "voice/start":
-      return { ...state, voice: { ...state.voice, status: "listening" } };
-
-    case "voice/result": {
-      const turn = VOICE_SCRIPT[state.scriptIndex % VOICE_SCRIPT.length];
-      const minutes = state.clockMinutes + 2;
-      const seq = state.seq + 1;
-      const past = [...state.past, snapshot(state)].slice(-25);
-
-      let boxes = state.boxes;
-      let feed = withEvent({ ...state, seq }, minutes, {
-        kind: "voice",
-        text: "Voice input received",
-        detail: turn.transcript,
-      });
-
-      if (turn.box) {
-        const newBox: Box = {
-          id: `box-${turn.box.number}`,
-          number: turn.box.number,
-          room: turn.box.room,
-          items: turn.box.items,
-          fragile: turn.box.fragile,
-          photos: 0,
-          loggedAt: stamp(minutes),
-        };
-        boxes = [...state.boxes, newBox];
-        feed = [
-          {
-            id: `ev-${seq}-box`,
-            at: stamp(minutes),
-            kind: "log",
-            text: `Box ${turn.box.number} logged`,
-            detail: `${turn.box.room} · ${turn.box.items.length} items${turn.box.fragile ? " · fragile" : ""}`,
-          },
-          ...feed,
-        ];
-      }
-
-      return {
-        ...state,
-        past,
-        seq,
-        clockMinutes: minutes,
-        scriptIndex: state.scriptIndex + 1,
-        boxes,
-        feed,
-        voice: { status: "idle", transcript: turn.transcript, reply: turn.reply, at: stamp(minutes) },
-        toast: turn.box
-          ? { id: `t-${seq}`, text: `Box ${turn.box.number} logged`, tone: "success" }
-          : { id: `t-${seq}`, text: "Answered from the manifest", tone: "default" },
-      };
-    }
-
-    case "photo": {
-      const minutes = state.clockMinutes + 1;
-      const seq = state.seq + 1;
-      const latest = state.boxes[state.boxes.length - 1];
-      if (!latest) return state;
-      return {
-        ...state,
-        past: [...state.past, snapshot(state)].slice(-25),
-        seq,
-        clockMinutes: minutes,
-        boxes: state.boxes.map((b) => (b.id === latest.id ? { ...b, photos: b.photos + 1 } : b)),
-        feed: withEvent({ ...state, seq }, minutes, {
-          kind: "photo",
-          text: "Photo captured",
-          detail: `Box ${latest.number} · ${latest.room}`,
-        }),
-        toast: { id: `t-${seq}`, text: `Photo added to Box ${latest.number}`, tone: "success" },
-      };
-    }
-
-    case "review": {
-      const minutes = state.clockMinutes + 1;
-      const seq = state.seq + 1;
-      const latest = state.boxes[state.boxes.length - 1];
-      if (!latest) return state;
-      const id = `d-${seq + 1}`;
-      const at = stamp(minutes);
-      const item = latest.items[0] ?? "Item";
-
-      const discrepancy: Discrepancy = {
-        id,
-        title: `Review requested on ${item.toLowerCase()}`,
-        item,
-        boxNumber: latest.number,
-        room: latest.room,
-        reportedAt: at,
-        status: "awaiting_photo",
-        photoRequests: 1,
-        assessment: {
-          damageType: "Not yet assessed",
-          location: "Not assessed",
-          severity: "Minor",
-          surveyMatch: "Not checked",
-          confidence: 0,
-        },
-        timeline: [
-          { id: `${id}-1`, at, kind: "human", text: "Marked for review", detail: `${item} → Box ${latest.number}` },
-          { id: `${id}-2`, at, kind: "system", text: "Photo requested", detail: "Packer prompted on the voice page" },
-        ],
-      };
-
-      return {
-        ...state,
-        past: [...state.past, snapshot(state)].slice(-25),
-        seq,
-        clockMinutes: minutes,
-        boxes: state.boxes.map((b) => (b.id === latest.id ? { ...b, flagged: true } : b)),
-        discrepancies: [discrepancy, ...state.discrepancies],
-        feed: withEvent({ ...state, seq }, minutes, {
-          kind: "human",
-          text: "Marked for review",
-          detail: `Box ${latest.number} · ${item}`,
-        }),
-        toast: { id: `t-${seq}`, text: "Sent to Discrepancy Review", tone: "warning" },
-      };
-    }
-
-    case "discrepancy/resolve": {
-      const minutes = state.clockMinutes + 1;
-      const seq = state.seq + 1;
-      const at = stamp(minutes);
-      const target = state.discrepancies.find((d) => d.id === action.id);
-      if (!target) return state;
-
-      const label =
-        action.decision === "confirmed"
-          ? "Discrepancy confirmed"
-          : action.decision === "pre_existing"
-            ? "Marked as pre-existing"
-            : "Another photo requested";
-
-      const timeline: FeedEvent[] = [
-        ...target.timeline,
-        { id: `${target.id}-h${seq}`, at, kind: "human", text: label, detail: "Priya Nair (ops coordinator)" },
-      ];
-
-      const notifications = [...state.notifications];
-      if (action.decision !== "awaiting_photo") {
-        timeline.push({
-          id: `${target.id}-o${seq}`,
-          at,
-          kind: "ops",
-          text: `Posted to ${OPS_CHANNEL}`,
-          detail: action.decision === "confirmed" ? "Claim opened, customer notified" : "Logged against the survey",
-        });
-        notifications.unshift({
-          id: `n-${seq}`,
-          at,
-          channel: OPS_CHANNEL,
-          title: `${label} · ${MOVE.id}`,
-          body: `${target.item} (Box ${target.boxNumber}, ${target.room}). Decided by Priya Nair.`,
-          status: "sent",
-        });
-      }
-
-      return {
-        ...state,
-        past: [...state.past, snapshot(state)].slice(-25),
-        seq,
-        clockMinutes: minutes,
-        discrepancies: state.discrepancies.map((d) =>
-          d.id === action.id
-            ? {
-                ...d,
-                status: action.decision,
-                decidedBy: action.decision === "awaiting_photo" ? undefined : "Priya Nair",
-                photoRequests: action.decision === "awaiting_photo" ? d.photoRequests + 1 : d.photoRequests,
-                timeline,
-              }
-            : d
-        ),
-        feed: withEvent({ ...state, seq }, minutes, {
-          kind: action.decision === "awaiting_photo" ? "system" : "human",
-          text: label,
-          detail: `${target.item} · Box ${target.boxNumber}`,
-        }),
-        toast: {
-          id: `t-${seq}`,
-          text: action.decision === "awaiting_photo" ? "Photo requested from packer" : `${label} · sent to ${OPS_CHANNEL}`,
-          tone: action.decision === "confirmed" ? "warning" : "success",
-        },
-      };
-    }
-
-    case "undo": {
-      const prev = state.past[state.past.length - 1];
-      if (!prev) return { ...state, toast: { id: `t-u`, text: "Nothing left to undo", tone: "default" } };
-      return {
-        ...prev,
-        past: state.past.slice(0, -1),
-        toast: { id: `t-u${state.seq}`, text: "Last action undone", tone: "default" },
-      };
-    }
 
     default:
       return state;
   }
 }
 
-const StoreContext = React.createContext<{
+interface StoreValue {
   state: State;
   dispatch: React.Dispatch<Action>;
-  pushToTalk: () => void;
-} | null>(null);
+  /** Record an ops decision. Same path the Telegram button takes. */
+  resolve: (id: string, decision: string) => Promise<void>;
+  refresh: () => Promise<void>;
+}
+
+const StoreContext = React.createContext<StoreValue | null>(null);
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = React.useReducer(reducer, initialState);
-  const timers = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+  const moveId = state.moveId;
 
-  // Brief hydrate so the skeleton states are real, not decorative.
+  const refresh = React.useCallback(async () => {
+    if (!moveId) return;
+    try {
+      const res = await fetch(`${API}/api/console/${moveId}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(String(res.status));
+      dispatch({ type: "data", payload: (await res.json()) as ConsolePayload });
+    } catch {
+      dispatch({ type: "connection", value: "offline" });
+    }
+  }, [moveId]);
+
+  // The move list, once.
   React.useEffect(() => {
-    const t = setTimeout(() => dispatch({ type: "hydrated" }), 650);
-    return () => clearTimeout(t);
+    let cancelled = false;
+    void (async () => {
+      try {
+        const res = await fetch(`${API}/api/console/moves`, { cache: "no-store" });
+        const body = (await res.json()) as { moves: MoveSummary[] };
+        if (!cancelled) dispatch({ type: "moves", moves: body.moves });
+      } catch {
+        if (!cancelled) dispatch({ type: "connection", value: "offline" });
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
+  // Poll the selected move. Cheap enough at 2s, and it is what makes the feed
+  // move while the packer is talking.
   React.useEffect(() => {
-    if (!state.toast) return;
-    const t = setTimeout(() => dispatch({ type: "toast/clear" }), 3200);
-    return () => clearTimeout(t);
-  }, [state.toast]);
+    if (!moveId) return;
+    void refresh();
+    const t = setInterval(() => void refresh(), POLL_MS);
+    return () => clearInterval(t);
+  }, [moveId, refresh]);
 
-  React.useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const resolve = React.useCallback(async (id: string, decision: string) => {
+    try {
+      const res = await fetch(`${API}/api/discrepancy/${id}/decision`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision, by: "console" }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      dispatch({ type: "toast", text: "Decision sent to the packer.", tone: "success" });
+      await refresh();
+    } catch (err) {
+      dispatch({
+        type: "toast",
+        text: `Could not record the decision: ${err instanceof Error ? err.message : String(err)}`,
+        tone: "warning",
+      });
+    }
+  }, [refresh]);
 
-  const pushToTalk = React.useCallback(() => {
-    dispatch({ type: "voice/start" });
-    const t = setTimeout(() => dispatch({ type: "voice/result" }), 1500);
-    timers.current.push(t);
-  }, []);
+  const value = React.useMemo(
+    () => ({ state, dispatch, resolve, refresh }),
+    [state, resolve, refresh],
+  );
 
-  const value = React.useMemo(() => ({ state, dispatch, pushToTalk }), [state, pushToTalk]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 
-export function useStore() {
+export function useStore(): StoreValue {
   const ctx = React.useContext(StoreContext);
-  if (!ctx) throw new Error("useStore must be used inside <StoreProvider>");
+  if (!ctx) throw new Error("useStore must be used inside StoreProvider");
   return ctx;
 }
-
-export const helpers = { stamp, MOVE, CREW, ROOMS };

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { OPS_CHANNEL, type Discrepancy } from "@/lib/demo-data";
+import { OPS_CHANNEL, type Discrepancy } from "@/lib/model";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +23,7 @@ const STATUS: Record<Discrepancy["status"], { label: string; variant: "warning" 
 };
 
 export default function DiscrepanciesPage() {
-  const { state, dispatch } = useStore();
+  const { state, resolve } = useStore();
   const [selectedId, setSelectedId] = React.useState(state.discrepancies[0]?.id ?? "");
 
   const selected = state.discrepancies.find((d) => d.id === selectedId) ?? state.discrepancies[0];
@@ -124,25 +124,37 @@ export default function DiscrepanciesPage() {
                 </AlertDescription>
               </Alert>
 
-              <dl className="grid gap-x-6 gap-y-3 rounded-lg border bg-muted/50 p-4 sm:grid-cols-2">
-                <Row label="Damage type" value={selected.assessment.damageType} />
-                <Row label="Location" value={selected.assessment.location} />
-                <Row label="Severity" value={selected.assessment.severity} />
-                <Row
-                  label="Survey match"
-                  value={selected.assessment.surveyMatch}
-                  tone={selected.assessment.surveyMatch === "Not found" ? "warn" : undefined}
-                />
-                <div className="sm:col-span-2">
-                  <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Confidence</dt>
-                  <dd className="mt-1.5 flex items-center gap-3">
-                    <div className="h-2 w-40 overflow-hidden rounded-full bg-secondary" aria-hidden>
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${selected.assessment.confidence}%` }} />
+              {selected.assessment ? (
+                <dl className="grid gap-x-6 gap-y-3 rounded-lg border bg-muted/50 p-4 sm:grid-cols-2">
+                  <Row label="Damage type" value={selected.assessment.damageType} />
+                  <Row label="Location" value={selected.assessment.location} />
+                  <Row label="Severity" value={selected.assessment.severity} />
+                  <Row
+                    label="Survey match"
+                    value={selected.assessment.surveyMatch}
+                    tone={selected.assessment.surveyMatch === "Not found" ? "warn" : undefined}
+                  />
+                  {/* The model reports no confidence score, so we show the
+                      judgement it does make: is this damage new? */}
+                  <Row
+                    label="Pre-existing"
+                    value={selected.assessment.likelyNew ? "No — looks new" : "Possibly"}
+                    tone={selected.assessment.likelyNew ? "warn" : undefined}
+                  />
+                  {selected.assessment.claims && (
+                    <div className="sm:col-span-2">
+                      <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                        Claim wording
+                      </dt>
+                      <dd className="mt-1.5 text-sm italic">{selected.assessment.claims}</dd>
                     </div>
-                    <span className="tabular text-sm font-medium">{selected.assessment.confidence}%</span>
-                  </dd>
-                </div>
-              </dl>
+                  )}
+                </dl>
+              ) : (
+                <p className="rounded-lg border bg-muted/50 p-4 text-sm text-muted-foreground">
+                  Waiting for the packer&rsquo;s photo — the assessment appears here once it arrives.
+                </p>
+              )}
 
               <Separator />
 
@@ -157,40 +169,28 @@ export default function DiscrepanciesPage() {
                     <span>
                       {STATUS[selected.status].label} by <strong>{selected.decidedBy}</strong> · posted to {OPS_CHANNEL}
                     </span>
-                    <Button size="sm" variant="outline" className="ml-auto" onClick={() => dispatch({ type: "undo" })}>
-                      <Icons.undo aria-hidden />
-                      Undo
-                    </Button>
+
                   </div>
                 ) : (
+                  <>
                   <div className="flex flex-wrap gap-2">
-                    <Button
-                      onClick={() => dispatch({ type: "discrepancy/resolve", id: selected.id, decision: "confirmed" })}
-                      disabled={blocked}
-                    >
+                    <Button onClick={() => void resolve(selected.id, "wrap_and_load")} disabled={blocked}>
                       <Icons.check aria-hidden />
-                      Confirm discrepancy
+                      Wrap &amp; load
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => dispatch({ type: "discrepancy/resolve", id: selected.id, decision: "pre_existing" })}
-                      disabled={blocked}
-                    >
-                      Mark as pre-existing
+                    <Button variant="outline" onClick={() => void resolve(selected.id, "hold")} disabled={blocked}>
+                      Hold
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => dispatch({ type: "discrepancy/resolve", id: selected.id, decision: "awaiting_photo" })}
-                      disabled={blocked}
-                    >
-                      <Icons.camera aria-hidden />
-                      Request another photo
-                    </Button>
-                    <Button variant="ghost" onClick={() => dispatch({ type: "undo" })} disabled={state.past.length === 0}>
-                      <Icons.undo aria-hidden />
-                      Undo
+                    <Button variant="outline" onClick={() => void resolve(selected.id, "claim")} disabled={blocked}>
+                      <Icons.flag aria-hidden />
+                      Open claim
                     </Button>
                   </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    The packer hears this decision in their earbuds, and the card in{" "}
+                    {OPS_CHANNEL} updates to match.
+                  </p>
+                  </>
                 )}
                 {selected.photoRequests > 1 && (
                   <p className="mt-2 text-xs text-muted-foreground">

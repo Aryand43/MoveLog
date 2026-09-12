@@ -3,7 +3,7 @@ import WebSocket from "ws";
 import { env } from "../env.js";
 import { insertEvent } from "../db/queries.js";
 import { callTool } from "../tools/index.js";
-import { registerSession, unregisterSession } from "./registry.js";
+import { noteTranscript, registerSession, unregisterSession } from "./registry.js";
 
 const ATTACH_URL = (sessionId: string) =>
   `wss://api.openai.com/v1/live/sessions/${sessionId}/attach`;
@@ -108,10 +108,14 @@ export async function attachSideband(input: AttachInput): Promise<void> {
       // back. Without this, "the model misheard" and "the model never heard" are
       // the same line of logs.
       if (inner.type === "session.input_transcript.done" || inner.type === "session.input_transcript.completed") {
-        console.log(`[live] heard: ${JSON.stringify(inner.transcript ?? inner.text ?? inner)}`);
+        const heard = String(inner.transcript ?? inner.text ?? "");
+        console.log(`[live] heard: ${JSON.stringify(heard)}`);
+        noteTranscript(input.moveId, "heard", heard);
       }
       if (inner.type === "session.output_transcript.done" || inner.type === "session.output_transcript.completed") {
-        console.log(`[live] said: ${JSON.stringify(inner.transcript ?? inner.text ?? inner)}`);
+        const said = String(inner.transcript ?? inner.text ?? "");
+        console.log(`[live] said: ${JSON.stringify(said)}`);
+        noteTranscript(input.moveId, "said", said);
       }
 
       if (inner.type === "session.closed") {

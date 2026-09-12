@@ -14,6 +14,8 @@ import { wireDecisionHandler } from "./channels/decisions.js";
 import { live } from "./live/session.js";
 import { attachPhoneSocket } from "./http/ws.js";
 import { photos } from "./http/photos.js";
+import { consoleApi } from "./http/console.js";
+import { decisions } from "./http/decisions.js";
 
 const app = new Hono();
 
@@ -28,6 +30,8 @@ app.use("/photos/*", serveStatic({ root: env.PHOTOS_DIR, rewriteRequestPath: (p)
 app.route("/", api);
 app.route("/", live);
 app.route("/", photos);
+app.route("/", consoleApi);
+app.route("/", decisions);
 
 // Phase 1 acceptance probe: posts a card with a real photo URL and three buttons.
 app.post("/internal/test-card", async (c) => {

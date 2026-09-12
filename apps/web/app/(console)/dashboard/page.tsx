@@ -12,25 +12,28 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { MOVE, ROOMS } from "@/lib/demo-data";
+import { moveDisplay, roomProgress } from "@/lib/derive";
 import { useStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
-  const { state, dispatch, pushToTalk } = useStore();
-  const { hydrating, voice, boxes, connection } = state;
-
-  const logged = boxes.length;
-  const pct = Math.round((logged / MOVE.boxesTotal) * 100);
+  const { state } = useStore();
+  const { hydrating, boxes, connection, voice } = state;
   const listening = voice.status === "listening";
+
+  const move = moveDisplay(state.move, state.counts);
+  const rooms = roomProgress(boxes, state.move?.survey ?? []);
+  const logged = boxes.length;
+  // Progress against boxes closed, since "total" is unknown until the job ends.
+  const pct = logged === 0 ? 0 : Math.round((state.counts.boxesClosed / logged) * 100);
   const blocked = connection !== "online";
   const openIssues = state.discrepancies.filter((d) => d.status === "pending" || d.status === "awaiting_photo").length;
 
   return (
     <>
       <PageHeader
-        title={MOVE.name}
-        description={`${MOVE.address} · ${MOVE.date}`}
+        title={move.name}
+        description={`${move.address} · ${move.date}`}
         actions={
           <>
             <Badge variant="success" className="gap-1.5">
@@ -67,17 +70,17 @@ export default function DashboardPage() {
               <>
                 <div className="flex items-baseline gap-2">
                   <span className="tabular text-3xl font-semibold tracking-tight">{logged}</span>
-                  <span className="text-sm text-muted-foreground">of {MOVE.boxesTotal} boxes logged</span>
+                  <span className="text-sm text-muted-foreground">of {move.boxesTotal} boxes logged</span>
                 </div>
                 <Progress
                   value={pct}
-                  aria-label={`${logged} of ${MOVE.boxesTotal} boxes logged`}
+                  aria-label={`${logged} of ${move.boxesTotal} boxes logged`}
                   className="h-2.5"
                 />
                 <div>
                   <p className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Rooms</p>
                   <ul className="flex flex-wrap gap-2">
-                    {ROOMS.map((r) => (
+                    {rooms.map((r) => (
                       <li key={r.name}>
                         <span
                           className={cn(
@@ -117,7 +120,7 @@ export default function DashboardPage() {
                 aria-hidden
                 className={cn("size-1.5 rounded-full", listening ? "animate-pulse bg-emerald-600" : "bg-slate-400")}
               />
-              {listening ? "Listening" : "Push to talk"}
+              {voice.status === "offline" ? "No session" : listening ? "Listening" : "Paused"}
             </Badge>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -130,7 +133,7 @@ export default function DashboardPage() {
                   <Skeleton className="h-12 w-full" />
                 ) : (
                   <blockquote className="rounded-lg border-l-2 border-primary bg-secondary/60 px-3 py-2 text-sm">
-                    &ldquo;{voice.transcript}&rdquo;
+                    {voice.transcript ? <>&ldquo;{voice.transcript}&rdquo;</> : "No packer session is connected."}
                     <footer className="tabular mt-1 text-xs text-muted-foreground">Packer · {voice.at}</footer>
                   </blockquote>
                 )}
@@ -142,7 +145,7 @@ export default function DashboardPage() {
                 ) : (
                   <p className="flex items-start gap-2 rounded-lg bg-accent px-3 py-2 text-sm text-accent-foreground">
                     <Icons.bot className="mt-0.5 size-4 shrink-0" aria-hidden />
-                    {voice.reply}
+                    {voice.reply || "—"}
                   </p>
                 )}
               </div>
@@ -150,36 +153,21 @@ export default function DashboardPage() {
 
             <Separator />
 
-            <div className="grid grid-cols-2 gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    onClick={pushToTalk}
-                    disabled={listening || blocked}
-                    className="col-span-2"
-                    aria-label={listening ? "Listening to the packer" : "Push to talk"}
-                  >
-                    <Icons.mic aria-hidden />
-                    {listening ? "Listening…" : "Push to talk"}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {blocked ? "Unavailable while the device is offline" : "Runs the next scripted voice turn"}
-                </TooltipContent>
-              </Tooltip>
-
-              <Button variant="outline" onClick={() => dispatch({ type: "photo" })} disabled={blocked}>
-                <Icons.camera aria-hidden />
-                Take photo
+            <div className="grid gap-2">
+              <Button asChild className="w-full">
+                <a
+                  href={`/pack/${state.move?.packerToken ?? ""}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Icons.mic aria-hidden />
+                  Open the packer view
+                </a>
               </Button>
-              <Button variant="outline" onClick={() => dispatch({ type: "undo" })} disabled={state.past.length === 0}>
-                <Icons.undo aria-hidden />
-                Undo
-              </Button>
-              <Button variant="secondary" className="col-span-2" onClick={() => dispatch({ type: "review" })} disabled={blocked}>
-                <Icons.flag aria-hidden />
-                Mark for review
-              </Button>
+              <p className="text-xs text-muted-foreground">
+                This console follows the packer&rsquo;s live session. Boxes, damage and
+                decisions appear here as they are spoken.
+              </p>
             </div>
           </CardContent>
         </Card>

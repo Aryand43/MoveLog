@@ -8,11 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { MOVE, OPS_CHANNEL, OPS_SURFACE } from "@/lib/demo-data";
+import { OPS_CHANNEL, OPS_SURFACE } from "@/lib/model";
+import { moveDisplay } from "@/lib/derive";
 import { useStore } from "@/lib/store";
 
 export default function SettingsPage() {
   const { state } = useStore();
+  const move = moveDisplay(state.move, state.counts);
   const [channel, setChannel] = React.useState(OPS_CHANNEL);
   const [autoEscalate, setAutoEscalate] = React.useState(true);
   const [requirePhoto, setRequirePhoto] = React.useState(true);
@@ -71,11 +73,11 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <dl className="space-y-3 text-sm">
-              <Field label="Move ID" value={MOVE.id} mono />
-              <Field label="Customer" value={MOVE.name} />
-              <Field label="Route" value={MOVE.address} />
-              <Field label="Date" value={MOVE.date} />
-              <Field label="Boxes expected" value={String(MOVE.boxesTotal)} mono />
+              <Field label="Move ID" value={move.id} mono />
+              <Field label="Customer" value={move.name} />
+              <Field label="Route" value={move.address} />
+              <Field label="Date" value={move.date} />
+              <Field label="Boxes expected" value={String(move.boxesTotal)} mono />
               <Field label="Boxes logged" value={String(state.boxes.length)} mono />
             </dl>
             <Separator className="my-4" />

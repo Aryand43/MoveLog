@@ -16,6 +16,10 @@ export interface LiveSession {
   say(text: string): Promise<void>;
   /** Quiet context the model may use but must not read aloud. */
   think?(text: string): Promise<void>;
+  /** Last thing the packer said and the agent's reply, for the ops console. */
+  lastHeard?: string;
+  lastSaid?: string;
+  lastAt?: string;
   close(): void;
 }
 
@@ -89,4 +93,31 @@ export function pushToPhone(moveId: string, msg: unknown): boolean {
     }
   }
   return true;
+}
+
+export type VoiceStatus = "idle" | "listening" | "processing" | "offline";
+
+/** What the packer just said, so the console can show the live conversation. */
+export function noteTranscript(moveId: string, kind: "heard" | "said", text: string): void {
+  const s = sessions.get(moveId);
+  if (!s || !text) return;
+  if (kind === "heard") s.lastHeard = text;
+  else s.lastSaid = text;
+  s.lastAt = new Date().toISOString().slice(11, 16);
+}
+
+export function voiceState(moveId: string): {
+  status: VoiceStatus;
+  transcript: string;
+  reply: string;
+  at: string;
+} {
+  const s = sessions.get(moveId);
+  if (!s) return { status: "offline", transcript: "", reply: "", at: "" };
+  return {
+    status: s.loggingPaused ? "idle" : "listening",
+    transcript: s.lastHeard ?? "",
+    reply: s.lastSaid ?? "",
+    at: s.lastAt ?? "",
+  };
 }

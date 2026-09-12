@@ -7,11 +7,12 @@ import { AuditTimeline } from "@/components/console/timeline";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MOVE } from "@/lib/demo-data";
+import { moveDisplay } from "@/lib/derive";
 import { useStore } from "@/lib/store";
 
 export default function ActivityPage() {
   const { state } = useStore();
+  const move = moveDisplay(state.move, state.counts);
   const tracked = state.discrepancies[state.discrepancies.length - 1];
   const decided = tracked?.status === "confirmed" || tracked?.status === "pre_existing";
   const pending = decided
@@ -25,7 +26,7 @@ export default function ActivityPage() {
     <>
       <PageHeader
         title="Activity Log"
-        description={`Every action on ${MOVE.id}, in the order it happened.`}
+        description={`Every action on ${move.id}, in the order it happened.`}
         actions={<Badge variant="outline">{state.feed.length} events</Badge>}
       />
 

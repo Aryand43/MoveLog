@@ -6,7 +6,7 @@ import * as React from "react";
 import { Icons } from "./icons";
 import { Badge } from "@/components/ui/badge";
 import { useStore } from "@/lib/store";
-import { MOVE } from "@/lib/demo-data";
+import { moveDisplay } from "@/lib/derive";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -20,6 +20,7 @@ const NAV = [
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { state } = useStore();
+  const move = moveDisplay(state.move, state.counts);
   const open = state.discrepancies.filter((d) => d.status === "pending" || d.status === "awaiting_photo").length;
 
   return (
@@ -67,8 +68,8 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
       <div className="mt-auto p-3">
         <div className="rounded-lg border border-sidebar-border bg-sidebar-hover p-3">
           <p className="text-xs text-sidebar-muted">Active move</p>
-          <p className="mt-0.5 truncate text-sm font-medium text-sidebar-foreground">{MOVE.name}</p>
-          <p className="tabular text-xs text-sidebar-muted">{MOVE.id}</p>
+          <p className="mt-0.5 truncate text-sm font-medium text-sidebar-foreground">{move.name}</p>
+          <p className="tabular text-xs text-sidebar-muted">{move.id}</p>
         </div>
       </div>
     </nav>

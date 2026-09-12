@@ -10,11 +10,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MOVE, SURVEY_DAMAGE } from "@/lib/demo-data";
+import { moveDisplay } from "@/lib/derive";
 import { useStore } from "@/lib/store";
 
 export default function ManifestPage() {
   const { state } = useStore();
+  const move = moveDisplay(state.move, state.counts);
+  // Pre-existing damage comes from the move\'s own survey, not a fixture.
+  const surveyDamage = (state.move?.survey ?? []).filter((s) => s.known_damage);
   const [query, setQuery] = React.useState("chargers");
   const [share, setShare] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -31,13 +34,13 @@ export default function ManifestPage() {
   }, [q, state.boxes]);
 
   const newDamage = state.discrepancies.filter((d) => d.status === "confirmed");
-  const shareUrl = `https://movelog.app/m/${MOVE.id.toLowerCase()}`;
+  const shareUrl = `https://movelog.app/m/${move.id.toLowerCase()}`;
 
   function downloadReport() {
     const lines = [
-      `MoveLog manifest: ${MOVE.name} (${MOVE.id})`,
-      `${MOVE.address}`,
-      `${MOVE.date} · ${state.boxes.length} of ${MOVE.boxesTotal} boxes logged`,
+      `MoveLog manifest: ${move.name} (${move.id})`,
+      `${move.address}`,
+      `${move.date} · ${state.boxes.length} of ${move.boxesTotal} boxes logged`,
       "",
       "BOXES",
       ...state.boxes.map(
@@ -46,12 +49,12 @@ export default function ManifestPage() {
       "",
       "CONDITION REPORT",
       "  Pre-existing (from the pre-move survey):",
-      ...SURVEY_DAMAGE.map((s) => `    - ${s.item} (${s.room}): ${s.note}`),
+      ...surveyDamage.map((s) => `    - ${s.item} (${s.room}): ${s.known_damage}`),
       "  Newly reported during packing:",
       ...(newDamage.length
         ? newDamage.map(
             (d) =>
-              `    - ${d.item} (Box ${d.boxNumber}, ${d.room}): ${d.assessment.damageType}, ${d.assessment.location}, ${d.assessment.severity}. Confirmed by ${d.decidedBy}.`
+              `    - ${d.item} (Box ${d.boxNumber || "?"}, ${d.room || "?"}): ${d.assessment ? `${d.assessment.damageType}, ${d.assessment.location}, ${d.assessment.severity}` : "assessment pending"}. Decided by ${d.decidedBy ?? "ops"}.`
           )
         : ["    - None confirmed"]),
     ];
@@ -59,7 +62,7 @@ export default function ManifestPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `movelog-${MOVE.id}-manifest.txt`;
+    a.download = `movelog-${move.id}-manifest.txt`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -68,7 +71,7 @@ export default function ManifestPage() {
     <>
       <PageHeader
         title="Customer Manifest"
-        description={`${state.boxes.length} boxes · ${MOVE.name}`}
+        description={`${state.boxes.length} boxes · ${move.name}`}
         actions={
           <>
             <Button variant="outline" onClick={() => setShare(true)}>
@@ -194,11 +197,11 @@ export default function ManifestPage() {
               <span className="text-muted-foreground">Recorded on the pre-move survey</span>
             </h3>
             <ul className="space-y-2">
-              {SURVEY_DAMAGE.map((s) => (
+              {surveyDamage.map((s) => (
                 <li key={s.item} className="rounded-lg border bg-muted/40 p-3 text-sm">
                   <p className="font-medium">{s.item}</p>
                   <p className="text-muted-foreground">
-                    {s.note} · {s.room}
+                    {s.known_damage} · {s.room}
                   </p>
                 </li>
               ))}
@@ -219,10 +222,12 @@ export default function ManifestPage() {
                   <li key={d.id} className="rounded-lg border border-red-200 bg-red-50/60 p-3 text-sm">
                     <p className="font-medium">{d.item}</p>
                     <p className="text-muted-foreground">
-                      {d.assessment.damageType}, {d.assessment.location.toLowerCase()} · {d.assessment.severity} · Box{" "}
-                      {d.boxNumber}
+                      {d.assessment
+                        ? `${d.assessment.damageType}, ${d.assessment.location.toLowerCase()} · ${d.assessment.severity}`
+                        : "assessment pending"}{" "}
+                      · Box {d.boxNumber || "—"}
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">Confirmed by {d.decidedBy}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Decided by {d.decidedBy ?? "ops"}</p>
                   </li>
                 ))}
               </ul>

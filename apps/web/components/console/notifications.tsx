@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Icons } from "./icons";
 import { useStore } from "@/lib/store";
-import { OPS_CHANNEL, OPS_SURFACE } from "@/lib/demo-data";
+import { OPS_CHANNEL, OPS_SURFACE } from "@/lib/model";
 
 export function NotificationPanel() {
   const { state } = useStore();

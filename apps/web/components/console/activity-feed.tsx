@@ -1,5 +1,5 @@
 import { kindStyle } from "./icons";
-import type { FeedEvent } from "@/lib/demo-data";
+import type { FeedEvent } from "@/lib/model";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 

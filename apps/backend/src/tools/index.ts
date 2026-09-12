@@ -5,6 +5,7 @@ import { closeBox, closeBoxSchema } from "./close_box.js";
 import { findItem, findItemSchema } from "./find_item.js";
 import { flagDiscrepancy, flagDiscrepancySchema } from "./flag_discrepancy.js";
 import { logItem, logItemSchema } from "./log_item.js";
+import { moveComplete, moveCompleteSchema } from "./move_complete.js";
 import { moveStatus, moveStatusSchema } from "./move_status.js";
 import { pauseLogging, pauseLoggingSchema, resumeLogging } from "./pause_logging.js";
 import { resolveDiscrepancy, resolveDiscrepancySchema } from "./resolve_discrepancy.js";
@@ -68,6 +69,15 @@ export const TOOLS: ToolSpec[] = [
     schema: moveStatusSchema,
     surfaces: ["voice", "ops", "customer"],
     handler: moveStatus as ToolSpec["handler"],
+  },
+  {
+    name: "move_complete",
+    description:
+      "Mark the move finished once everything is packed and loaded. Returns the customer's " +
+      "handover link. Only call when the packer says the move or the job is complete.",
+    schema: moveCompleteSchema,
+    surfaces: ["voice"],
+    handler: moveComplete as ToolSpec["handler"],
   },
   {
     name: "run_select",
