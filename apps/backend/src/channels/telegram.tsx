@@ -31,6 +31,29 @@ export async function startChannels(): Promise<void> {
 
   adapter = telegram({ token: env.TELEGRAM_BOT_TOKEN });
 
+  adapter.bot.use(async (ctx, next) => {
+    const text = ctx.message?.text ?? "";
+    const deepLink = text.match(/^\/start(?:@\S+)?\s+(\S+)/);
+    if (!deepLink?.[1]) {
+      await next();
+      return;
+    }
+
+    const chatId = String(ctx.chat?.id ?? "");
+    const move = await getMoveByToken("customer_token", deepLink[1]);
+    if (!move) {
+      await ctx.reply("I couldn't find that move. Please check the link from your mover.");
+      return;
+    }
+
+    await setCustomerChat(move.move_id, chatId);
+    console.log(`[channels] bound chat ${chatId} to ${move.move_id}`);
+    await ctx.reply(
+      `Hi ${move.customer_name} — I'm tracking your move to ${move.address}. ` +
+        `Ask me where anything is and I'll tell you which box it's in.`,
+    );
+  });
+
   channel = createChannel({
     name: "movelog",
     identifyUser: "platform",
@@ -39,7 +62,7 @@ export async function startChannels(): Promise<void> {
     agent: (threadId) => (isOpsChat(chatIdOf(threadId)) ? opsAgent : customerAgent),
   });
 
-  channel.onMessage(async ({ thread, message }) => {
+  const handleTurn = async ({ thread, message }: { thread: any; message: any }) => {
     // thread.conversationKey is "tg:<chatId>:<scope>" and is always populated;
     // message.ref.chatId is not, and an empty id here used to match any move
     // whose customer_chat_id was still unset.
@@ -47,22 +70,6 @@ export async function startChannels(): Promise<void> {
     if (chatId && !seenChats.has(chatId)) {
       seenChats.add(chatId);
       console.log(`[channels] chat ${chatId} ${isOpsChat(chatId) ? "(ops group)" : ""}`);
-    }
-
-    // Deep link from the handover QR: /start <customer_token> binds this chat to a move.
-    const start = message.text.match(/^\/start(?:@\S+)?\s+(\S+)/);
-    if (start?.[1]) {
-      const move = await getMoveByToken("customer_token", start[1]);
-      if (!move) {
-        await thread.post("I couldn't find that move. Please check the link from your mover.");
-        return;
-      }
-      await setCustomerChat(move.move_id, chatId);
-      await thread.post(
-        `Hi ${move.customer_name} — I'm tracking your move to ${move.address}. ` +
-          `Ask me where anything is and I'll tell you which box it's in.`,
-      );
-      return;
     }
 
     if (isOpsChat(chatId)) {
@@ -100,7 +107,10 @@ export async function startChannels(): Promise<void> {
         moveId: move.move_id, actorId: chatId, actorType: "customer", utterance: message.text,
       }),
     });
-  });
+  };
+
+  channel.onMessage(handleTurn);
+  channel.onMention(handleTurn);
 
   const runtime = new CopilotRuntime({
     agents: { movelog: opsAgent },

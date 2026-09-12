@@ -3,7 +3,6 @@
 import * as React from "react";
 import { PageHeader } from "@/components/console/shell";
 import { AuditTimeline } from "@/components/console/timeline";
-import { EvidencePhoto } from "@/components/console/photo";
 import { Icons } from "@/components/console/icons";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -111,8 +110,23 @@ export default function DiscrepanciesPage() {
 
             <CardContent className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
-                <EvidencePhoto variant="damaged" caption={`Packer photo at ${selected.reportedAt}`} />
-                <EvidencePhoto variant="survey" caption="Pre-move survey reference, 4 Sep" />
+                {selected.photoUrl ? (
+                  <figure className="overflow-hidden rounded-lg border bg-slate-100">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={selected.photoUrl}
+                      alt={`Packer photo of ${selected.item}`}
+                      className="aspect-[4/3] w-full object-cover"
+                    />
+                    <figcaption className="border-t bg-white px-3 py-2 text-xs text-muted-foreground">
+                      Packer photo at {selected.reportedAt}
+                    </figcaption>
+                  </figure>
+                ) : (
+                  <p className="rounded-lg border bg-muted/50 p-4 text-sm text-muted-foreground">
+                    No photo yet.
+                  </p>
+                )}
               </div>
 
               <Alert>
