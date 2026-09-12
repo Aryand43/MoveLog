@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { API } from "@/lib/api";
 
 type Status = "idle" | "connecting" | "live" | "error";
 
-export default function PackClient({ token }: { token: string }) {
+export default function PackClient({ token, apiUrl }: { token: string; apiUrl: string }) {
+  const API = apiUrl.replace(/\/$/, "");
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string>("");
   const [paused, setPaused] = useState(false);
@@ -69,7 +69,7 @@ export default function PackClient({ token }: { token: string }) {
       setStatus("error");
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [token]);
+  }, [token, API]);
 
   const stop = useCallback(() => {
     pcRef.current?.close();
@@ -97,7 +97,7 @@ export default function PackClient({ token }: { token: string }) {
       }
     };
     return () => ws.close();
-  }, [token]);
+  }, [token, API]);
 
   const upload = useCallback(async (file: File) => {
     if (!cameraFor) return;
@@ -114,7 +114,7 @@ export default function PackClient({ token }: { token: string }) {
     } finally {
       setUploading(false);
     }
-  }, [cameraFor]);
+  }, [cameraFor, API]);
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-6 p-6">
