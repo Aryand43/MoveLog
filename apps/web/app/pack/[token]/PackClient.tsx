@@ -39,15 +39,21 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
     setStatus("connecting");
     setError("");
     try {
-      // Prime the element during the tap: mobile grants playback to a gesture.
+      // Prime the element during the tap so mobile associates playback with the
+      // gesture. Never awaited: play() on an element with no source can stay
+      // pending forever, which strands start() before it ever opens the mic.
       if (audioRef.current) {
         audioRef.current.muted = false;
-        await audioRef.current.play().catch(() => undefined);
+        void audioRef.current.play().catch(() => undefined);
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      });
+      const stream = await withTimeout(
+        navigator.mediaDevices.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        }),
+        15_000,
+        "microphone permission",
+      );
       streamRef.current = stream;
 
       // Without a STUN server the offer carries host candidates only, which is
@@ -77,11 +83,15 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
 
       // Our backend exchanges the offer using the project key; the browser never
       // holds an OpenAI credential.
-      const res = await fetch(`${API}/live/session`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, sdp: pc.localDescription?.sdp }),
-      });
+      const res = await withTimeout(
+        fetch(`${API}/live/session`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, sdp: pc.localDescription?.sdp }),
+        }),
+        20_000,
+        "session request",
+      );
       if (!res.ok) throw new Error(`session failed: ${res.status} ${await res.text()}`);
 
       const { sdp } = (await res.json()) as { sdp: string };
@@ -247,6 +257,16 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
       </p>
     </main>
   );
+}
+
+/** Surface a stall instead of sitting on "connecting" indefinitely. */
+function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${what} timed out after ${ms / 1000}s`)), ms),
+    ),
+  ]);
 }
 
 /** Wait for ICE gathering so the offer we send is complete. */
