@@ -1,10 +1,10 @@
 # demo-video
 
-Everything to do with the MoveMate video lives here. No app code.
+Everything to do with the MoveLog video lives here. No app code.
 
 | Path | What |
 |---|---|
-| `MoveMate-walkthrough.mp4` | **The deliverable.** 2:01 · 1920×1080 · 30fps · H.264 + silent AAC track |
+| `MoveLog-walkthrough.mp4` | **The deliverable.** 2:01 · 1920×1080 · 30fps · H.264 + silent AAC track |
 | `build.mjs` | Generates `index.html`. All copy and timings live in the DATA blocks at the top |
 | `index.html` | Generated HyperFrames composition — do not hand-edit, it gets overwritten |
 | `SHOOTING_SCRIPT.md` | Shot-by-shot script for the **real** demo video, filmed off the running product |
@@ -36,8 +36,8 @@ It currently does: 0 errors, 102/102 text checks. Iterate with `npx hyperframes 
 To refresh the committed deliverable after a render (adds the silent audio track players expect):
 
 ```bash
-ffmpeg -y -i renders/movemate-walkthrough.mp4 -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=48000 \
-  -c:v copy -c:a aac -b:a 128k -shortest -movflags +faststart MoveMate-walkthrough.mp4
+ffmpeg -y -i renders/movelog-walkthrough.mp4 -f lavfi -i anullsrc=channel_layout=stereo:sample_rate=48000 \
+  -c:v copy -c:a aac -b:a 128k -shortest -movflags +faststart MoveLog-walkthrough.mp4
 ```
 
 Requires Node 22+ and FFmpeg. The HyperFrames agent skills are installed globally

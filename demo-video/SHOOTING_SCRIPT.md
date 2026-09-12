@@ -1,4 +1,4 @@
-# MoveMate — demo video shooting script
+# MoveLog — demo video shooting script
 
 **Runtime: 2:00.** Record only after Phase 5 passes (packer speaks → Telegram card → ops taps → packer hears).
 Everything in this script is real product footage. Nothing is mocked. If a beat won't run live, cut the
@@ -53,7 +53,7 @@ And when something's already damaged, nobody knows whose fault it is until the c
 **Cut on:** the packer standing up with the box, phone in their pocket.
 
 ### 0:16–0:26 — The setup line (shot C → A)
-**VO:** "MoveMate is one agent that lives in three places. The packer's earbuds. The ops team's
+**VO:** "MoveLog is one agent that lives in three places. The packer's earbuds. The ops team's
 Telegram group. And the customer's chat."
 **On screen:** quick push into the phone screen — `/pack/TAN-001`, big **Start** button, tap it, status goes green.
 

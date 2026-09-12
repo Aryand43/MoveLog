@@ -1,4 +1,4 @@
-// Generates index.html — a seek-safe HyperFrames composition of the MoveMate walkthrough.
+// Generates index.html — a seek-safe HyperFrames composition of the MoveLog walkthrough.
 // Edit the DATA blocks below, run `node build.mjs`, then `npx hyperframes check`.
 import fs from 'fs';
 
@@ -7,11 +7,11 @@ const esc = s => s;       // captions carry intentional markup
 
 // ---------------------------------------------------------------- captions
 const CAPS = [
-  [1.2, 5.2,  '<b>MoveMate</b> — a voice agent for movers and packers'],
+  [1.2, 5.2,  '<b>MoveLog</b> · a voice agent for movers and packers'],
   [6.8, 10.0, 'A packing crew logs a hundred boxes a day on paper.'],
   [10.0,13.0, "Ops finds out what's inside them tomorrow."],
   [13.0,17.0, 'And when something is already damaged, nobody knows whose fault it is until the claim lands.'],
-  [18.2,22.0, 'MoveMate is <b>one agent</b> that lives in three places.'],
+  [18.2,22.0, 'MoveLog is <b>one agent</b> that lives in three places.'],
   [22.0,25.6, "The packer's <b>earbuds</b>. The ops team's <b>Telegram group</b>. The customer's <b>private chat</b>."],
   [26.6,29.6, 'He taps start. The phone goes in his pocket and stays there.'],
   [30.4,34.2, '<b>"Box twelve, kitchen. Glasses, the blender, two chopping boards. Fragile."</b>'],
@@ -22,7 +22,7 @@ const CAPS = [
   [48.0,51.6, '<i>"Box A9, study."</i> — every box logged today is queryable, by voice, mid-lift'],
   [52.4,55.4, '<b>"The oak dresser has a scratch on the left side."</b>'],
   [55.4,58.8, "<i>\"Noted — that one's on the survey.\"</i> — pre-existing damage, recognised, no escalation"],
-  [59.6,62.6, '<b>"The sofa has a tear on the back cushion."</b>'],
+  [59.6,62.6, '<b>"The sofa has a tear on the left armrest."</b>'],
   [62.6,65.4, '<i>"Not on the survey. Grab a photo."</i>'],
   [65.4,68.6, 'He taps once. The photo goes to GPT‑5.6 Luna — not into the voice session.'],
   [68.6,71.6, '<i>"Six-inch tear, minor, looks new. Logging it."</i>'],
@@ -47,7 +47,7 @@ const TR = [  // [time, kind, text]
   [48.0,'ag','Box A9, study.'],
   [52.4,'me','The oak dresser has a scratch on the left side.'],
   [55.4,'ag',"Noted — that one's on the survey."],
-  [59.6,'me','The sofa has a tear on the back cushion.'],
+  [59.6,'me','The sofa has a tear on the left armrest.'],
   [62.6,'ag','Not on the survey. Grab a photo.'],
   [68.6,'ag','Six-inch tear, minor, looks new. Logging it.'],
 ];
@@ -64,7 +64,7 @@ const ROWS = [ // [time, clock, text, cls]
   [67.6,'09:15:31','assessment_done · tear · minor · likely_new','warn'],
 ];
 const CHIPS = [[32.6,'glasses',0],[33.1,'blender',0],[33.6,'chopping boards ×2',0],[33.9,'FRAGILE',1],[40.4,'phone chargers',0]];
-const TR5 = [[72.6,'me','The sofa has a tear on the back cushion.'],[73.2,'ag','Six-inch tear, minor, looks new. Logging it.'],[86.6,'ag','Ops says wrap and load. Claim opened.']];
+const TR5 = [[72.6,'me','The sofa has a tear on the left armrest.'],[73.2,'ag','Six-inch tear, minor, looks new. Logging it.'],[86.6,'ag','Ops says wrap and load. Claim opened.']];
 const CTG = [[99.4,'in','Hi — I have your move. Ask me anything.'],[100.6,'out','did my TV get packed?'],[102.4,'in','Yes — box A7, living room, marked fragile. Packed at 10:42 and logged with a photo.']];
 const MAN = [[97.0,'Box A9','router, cables, desk lamp','STUDY'],[97.5,'Box A12','glasses, blender, chopping boards ×2, phone chargers','FRAGILE'],[98.0,'Box A13','plates, bowls, cutlery tray','KITCHEN']];
 
@@ -72,7 +72,7 @@ const SCENES = [['s1',0,6],['s2',6,11.6],['s3',17.6,8.6],['s4',26.2,46],['s5',72
 
 // ---------------------------------------------------------------- fragments
 const bubbles = (arr,pfx) => arr.map(([t,k,txt],i)=>
-  `<div class="b ${k}" id="${pfx}${i}">${k==='ag'?'<span class="who">MoveMate</span>':''}<span>${txt}</span></div>`).join('\n          ');
+  `<div class="b ${k}" id="${pfx}${i}">${k==='ag'?'<span class="who">MoveLog</span>':''}<span>${txt}</span></div>`).join('\n          ');
 const rows = ROWS.map(([t,clk,txt,c],i)=>
   `<div class="r ${c}" id="row${i}"><span class="t">${clk}</span><span class="e">${txt}</span></div>`).join('\n            ');
 const chips = CHIPS.map(([t,txt,f],i)=>`<div class="chip${f?' frag':''}" id="chip${i}">${txt}</div>`).join('');
@@ -96,7 +96,7 @@ const html = `<!doctype html>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=1920, height=1080" />
-    <title>MoveMate Walkthrough</title>
+    <title>MoveLog Walkthrough</title>
     <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
     <style>
       *{margin:0;padding:0;box-sizing:border-box}
@@ -215,7 +215,7 @@ const html = `<!doctype html>
 
         <div class="scene clip" id="s1" data-start="0" data-duration="6">
           <div class="tw">
-            <div class="logo" id="t-logo">Move<span>Mate</span></div>
+            <div class="logo" id="t-logo">Move<span>Log</span></div>
             <div class="rule" id="t-rule"></div>
             <div class="tag" id="t-tag">One agent. Three surfaces. Zero keyboards.</div>
           </div>
@@ -250,7 +250,7 @@ const html = `<!doctype html>
           <div class="row">
             <div class="phone">
               <div class="notch"></div>
-              <div class="ph-top"><span class="ph-title">MoveMate</span>
+              <div class="ph-top"><span class="ph-title">MoveLog</span>
                 <span class="ph-pill"><span class="dot" id="dot4"></span>Listening</span></div>
               <div class="wave" id="wave4">${bars(14)}</div>
               <div class="trw"><div class="tr" id="tr">
@@ -276,7 +276,7 @@ const html = `<!doctype html>
           <div class="row">
             <div class="phone">
               <div class="notch"></div>
-              <div class="ph-top"><span class="ph-title">MoveMate</span>
+              <div class="ph-top"><span class="ph-title">MoveLog</span>
                 <span class="ph-pill"><span class="dot" id="dot5"></span>Listening</span></div>
               <div class="wave" id="wave5">${bars(14)}</div>
               <div class="trw"><div class="tr" id="tr5">
@@ -290,7 +290,7 @@ const html = `<!doctype html>
                   <div class="card-h">⚠️ New damage · TAN-001 · Sofa</div>
                   <div class="card-b">
                     <div class="shot">${SOFA}<div class="lbl">Packer photo · illustration</div></div>
-                    <div class="fl"><span class="k">Assessment</span><span class="v">Six-inch tear along the back cushion seam.</span></div>
+                    <div class="fl"><span class="k">Assessment</span><span class="v">Six-inch tear along the left armrest seam.</span></div>
                     <div class="fl"><span class="k">Severity</span><span class="v">Minor · likely new</span></div>
                     <div class="fl"><span class="k">On survey?</span><span class="v no">No</span></div>
                   </div>
@@ -312,7 +312,7 @@ const html = `<!doctype html>
           <div class="hdr">Handover · <b>the same bot, scoped to one move</b></div>
           <div class="row">
             <div class="tg" style="width:400px">
-              <div class="tg-head"><div class="tg-av" data-layout-ignore="true">📦</div><div><div class="n">MoveMate</div><div class="s">bot</div></div></div>
+              <div class="tg-head"><div class="tg-av" data-layout-ignore="true">📦</div><div><div class="n">MoveLog</div><div class="s">bot</div></div></div>
               <div class="tg-body">
             ${ctg}
               </div>
@@ -322,14 +322,14 @@ const html = `<!doctype html>
               <div class="man-b">
             ${man}
               </div>
-              <div class="cond" id="cond"><b>Condition report · 1 new item</b>Sofa — six-inch tear, back cushion seam. Not on the pre-move survey. Ops decision: wrap and load, claim opened.</div>
+              <div class="cond" id="cond"><b>Condition report · 1 new item</b>Sofa · six-inch tear, left armrest seam. Not on the pre-move survey. Ops decision: wrap and load, claim opened.</div>
             </div>
           </div>
         </div>
 
         <div class="scene clip" id="s7" data-start="108.8" data-duration="12.2">
           <div class="tw">
-            <div class="logo" id="k0" style="font-size:44px">Move<span>Mate</span></div>
+            <div class="logo" id="k0" style="font-size:44px">Move<span>Log</span></div>
             <div class="kicker" id="k1">Same agent. Same tools. Same state.<br>
               It meets the packer in their <b>earbuds</b>, ops in their <b>Telegram group</b>,<br>and the customer in a <b>private chat</b>.</div>
             <div class="arch">

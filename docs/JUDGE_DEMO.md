@@ -12,10 +12,13 @@ At 180 seconds the whole demo is **one round trip**: the packer speaks, a card l
 
 The single biggest 3-minute mistake is demoing from a cold start. Pre-warm everything:
 
+- [ ] Reset to a clean move: `npx tsx apps/backend/scripts/reset-demo.ts`.
 - [ ] Backend live: `curl $MODAL_URL/health` returns `{"ok":true}`.
 - [ ] **17 boxes already logged.** Progress must look like a real morning's work, not an empty app.
 - [ ] Ops Telegram group open on the laptop, scrolled clean, old cards deleted.
 - [ ] Packer phone on `/pack/pack-tan001`. Earbuds in **one ear** so you can still hear judges. Screen-lock off, Do Not Disturb on.
+- [ ] **Keep the pack page in the foreground.** Backgrounding it tears down WebRTC and kills the session.
+- [ ] Ops taps on the **laptop**, never on the packer's phone. Two devices, visibly separate, is the whole point.
 - [ ] **Second phone: customer chat already open with the TV answer on screen.** You will hold it up for 8 seconds, not demo it live.
 - [ ] Damage prop within arm's reach. Know where the light is.
 - [ ] Video queued as a fallback.
@@ -60,7 +63,7 @@ Agent: *"Noted, that one's on the survey."*
 
 Now damage that **is not**:
 
-> "The leather sofa has a tear on the back cushion."
+> "The sofa has a tear on the left armrest."
 
 Agent: *"Not on the survey. Grab a photo."*
 
@@ -139,7 +142,10 @@ Direct CopilotKit Channels adapter: one bot token, long-polling, no webhook or w
 It is event-sourced, not CRUD. Every utterance and tool call is an immutable row carrying the raw transcript. Current state is a `FINAL` query, not a mutable table. That is the audit trail a claim is argued from.
 
 **"What isn't built?"**
-The Trigger.dev escalation timer. And the web console runs on seeded state, not the backend — the live surfaces are the earbuds and Telegram. Say this plainly; volunteering it costs less than being caught.
+The Trigger.dev escalation timer. That is the honest gap; volunteering it costs less than being caught.
+
+**"Is the console real, or a mockup?"**
+Real. It reads `/api/console/:moveId` from ClickHouse with no caching, so a box logged by voice appears without a refresh, and an ops decision made in the console posts back through the same `resolve_discrepancy` path as the Telegram button. Same state, four ways in.
 
 ---
 
