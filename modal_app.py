@@ -37,6 +37,10 @@ photos = modal.Volume.from_name("movelog-photos", create_if_missing=True)
 @app.function(
     image=image,
     secrets=[modal.Secret.from_dotenv(__file__)],
+    # ClickHouse Cloud runs in asia-southeast1 and the demo phone is in Singapore.
+    # Every tool call is several sequential ClickHouse round trips, so a container
+    # in the US pays a Pacific crossing per query on the packer's critical path.
+    region="ap-southeast",
     volumes={"/photos": photos},
     min_containers=1,
     max_containers=1,

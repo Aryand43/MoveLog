@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   getBox, insertEvent, insertItems, nextBoxId, norm, openBox, upsertBox,
 } from "../db/queries.js";
+import type { BoxRow } from "../db/types.js";
 import type { ToolContext } from "./types.js";
 
 export const logItemSchema = z.object({
@@ -31,26 +32,23 @@ const canonicalBoxId = (spoken: string, packerId: string): string => {
 export async function logItem(args: LogItemArgs, ctx: ToolContext): Promise<LogItemResult> {
   const packerId = ctx.actorId;
 
+  // Each ClickHouse round trip is on the packer's critical path, so resolve the
+  // box with one lookup rather than two and batch the writes below.
   let boxId: string;
-  let newBox = false;
+  let existing: BoxRow | null;
 
   if (args.box) {
     boxId = canonicalBoxId(args.box, packerId);
-    newBox = (await getBox(ctx.moveId, boxId)) === null;
+    existing = await getBox(ctx.moveId, boxId);
   } else {
-    const open = await openBox(ctx.moveId, packerId);
-    if (open) {
-      boxId = open.box_id;
-    } else {
-      boxId = await nextBoxId(ctx.moveId, packerId);
-      newBox = true;
-    }
+    existing = await openBox(ctx.moveId, packerId);
+    boxId = existing?.box_id ?? (await nextBoxId(ctx.moveId, packerId));
   }
 
-  const existing = await getBox(ctx.moveId, boxId);
+  const newBox = existing === null;
   const room = args.room ?? existing?.room ?? "unsorted";
 
-  await upsertBox({
+  const boxWrite = upsertBox({
     move_id: ctx.moveId,
     box_id: boxId,
     room,
@@ -69,17 +67,21 @@ export async function logItem(args: LogItemArgs, ctx: ToolContext): Promise<LogI
     name_norm: norm(name),
     fragile: args.fragile ? 1 : 0,
   }));
-  await insertItems(items);
-
-  await insertEvent({
-    move_id: ctx.moveId,
-    actor_id: ctx.actorId,
-    actor_type: ctx.actorType,
-    event_type: "item_logged",
-    box_id: boxId,
-    utterance: ctx.utterance,
-    payload: { items: args.items, room, fragile: !!args.fragile, high_value: !!args.high_value },
-  });
+  // Independent writes: the box row, the item rows and the audit event do not
+  // read each other, so they go together instead of three trips in series.
+  await Promise.all([
+    boxWrite,
+    insertItems(items),
+    insertEvent({
+      move_id: ctx.moveId,
+      actor_id: ctx.actorId,
+      actor_type: ctx.actorType,
+      event_type: "item_logged",
+      box_id: boxId,
+      utterance: ctx.utterance,
+      payload: { items: args.items, room, fragile: !!args.fragile, high_value: !!args.high_value },
+    }),
+  ]);
 
   return { box_id: boxId, room, item_count: items.length, new_box: newBox };
 }
