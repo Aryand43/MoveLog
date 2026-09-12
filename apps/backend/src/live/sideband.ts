@@ -63,6 +63,7 @@ export async function attachSideband(input: AttachInput): Promise<void> {
       });
 
       registerSession({
+        sessionId: input.sessionId,
         moveId: input.moveId,
         packerId: input.packerId,
         loggingPaused: false,
@@ -88,27 +89,40 @@ export async function attachSideband(input: AttachInput): Promise<void> {
         return;
       }
 
-      // Delegated work arrives wrapped: dispatch on the inner type, keep the
-      // outer delegation_id so results go back to the right delegation.
+      // Delegated work arrives wrapped in a response.event envelope; dispatch on
+      // the inner type. The envelope's delegation_id is not echoed back: session.*
+      // appends take it, response.* events reject it.
       const inner = envelope.type === "response.event" ? envelope.event : envelope;
-      const delegationId: string | null = envelope.delegation_id ?? null;
       if (!inner?.type) return;
       noteEventType(envelope.type === "response.event" ? `response.event/${inner.type}` : inner.type);
 
+      if (inner.type === "session.closed") {
+        // The packer pressed Stop or the page went away. The session id is dead,
+        // so reattaching would just 404 five times.
+        closedByUs = true;
+        return;
+      }
+
       if (inner.type === "error") {
-        console.error(`[live] session error for ${input.moveId}:`, inner.error ?? inner);
+        console.error(
+          `[live] session error for ${input.moveId}:`,
+          JSON.stringify(inner.error ?? inner),
+        );
         return;
       }
 
       // A completed function call is the only event that carries call_id, name
       // and arguments together — an arguments-done event alone is not enough.
       if (inner.type === "response.output_item.done" && inner.item?.type === "function_call") {
-        void handleCalls([inner.item as PendingCall], delegationId);
+        void handleCalls([inner.item as PendingCall]);
       }
     });
 
     ws.on("close", () => {
-      unregisterSession(input.moveId);
+      // Only clear the registry if it still points at THIS session: pressing
+      // Start again registers a new one first, and blindly deleting here would
+      // evict the live session and silence the ops decision.
+      unregisterSession(input.moveId, input.sessionId);
       if (closedByUs) return;
       if (attempts >= MAX_RECONNECTS) {
         console.error(`[live] sideband for ${input.moveId} gave up after ${attempts} reconnects`);
@@ -120,6 +134,14 @@ export async function attachSideband(input: AttachInput): Promise<void> {
       setTimeout(connect, delay);
     });
 
+    // A 404 on attach means the session no longer exists; retrying cannot help.
+    ws.on("unexpected-response", (_req, res) => {
+      if (res.statusCode === 404) {
+        closedByUs = true;
+        console.warn(`[live] session ${input.sessionId} is gone (404); not reattaching`);
+      }
+    });
+
     ws.on("error", (err) => {
       console.error(`[live] sideband error for ${input.moveId}:`, err.message);
     });
@@ -128,7 +150,7 @@ export async function attachSideband(input: AttachInput): Promise<void> {
      * Execute the calls, submit every result, then continue. All pending results
      * must be submitted before response.create or the backend model stalls.
      */
-    async function handleCalls(calls: PendingCall[], delegation_id: string | null): Promise<void> {
+    async function handleCalls(calls: PendingCall[]): Promise<void> {
       for (const call of calls) {
         let args: unknown = {};
         try {
@@ -144,9 +166,11 @@ export async function attachSideband(input: AttachInput): Promise<void> {
           actorType: "packer",
         });
 
+        // No delegation_id here: the API rejects it on response.* events with
+        // "Unknown parameter: 'delegation_id'", which silently swallowed every
+        // tool result — writes still happened, but the model never heard back.
         send({
           type: "response.item.create",
-          delegation_id,
           item: {
             type: "function_call_output",
             call_id: call.call_id,
@@ -155,7 +179,7 @@ export async function attachSideband(input: AttachInput): Promise<void> {
         });
       }
 
-      send({ type: "response.create", delegation_id });
+      send({ type: "response.create" });
     }
   };
 

@@ -7,6 +7,8 @@
  * identically from the ops chat when nobody is wearing the earbuds.
  */
 export interface LiveSession {
+  /** The Live session id this entry belongs to, so a stale socket cannot evict a newer one. */
+  sessionId: string;
   moveId: string;
   packerId: string;
   loggingPaused: boolean;
@@ -28,7 +30,10 @@ export const registerSession = (s: LiveSession): void => {
   sessions.set(s.moveId, s);
 };
 
-export const unregisterSession = (moveId: string): void => {
+export const unregisterSession = (moveId: string, sessionId?: string): void => {
+  const current = sessions.get(moveId);
+  if (!current) return;
+  if (sessionId && current.sessionId !== sessionId) return; // a newer session took over
   sessions.delete(moveId);
 };
 
