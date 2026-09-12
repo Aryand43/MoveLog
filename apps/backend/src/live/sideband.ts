@@ -104,7 +104,18 @@ export async function attachSideband(input: AttachInput): Promise<void> {
         console.log(`[live] audio flowing for ${input.moveId} (${input.sessionId})`);
       }
 
+      // Ground truth on what the packer actually said, and what the agent said
+      // back. Without this, "the model misheard" and "the model never heard" are
+      // the same line of logs.
+      if (inner.type === "session.input_transcript.done" || inner.type === "session.input_transcript.completed") {
+        console.log(`[live] heard: ${JSON.stringify(inner.transcript ?? inner.text ?? inner)}`);
+      }
+      if (inner.type === "session.output_transcript.done" || inner.type === "session.output_transcript.completed") {
+        console.log(`[live] said: ${JSON.stringify(inner.transcript ?? inner.text ?? inner)}`);
+      }
+
       if (inner.type === "session.closed") {
+        console.log(`[live] session closed for ${input.moveId}: ${JSON.stringify(inner)}`);
         // The packer pressed Stop or the page went away. The session id is dead,
         // so reattaching would just 404 five times.
         closedByUs = true;
@@ -122,6 +133,7 @@ export async function attachSideband(input: AttachInput): Promise<void> {
       // A completed function call is the only event that carries call_id, name
       // and arguments together — an arguments-done event alone is not enough.
       if (inner.type === "response.output_item.done" && inner.item?.type === "function_call") {
+        console.log(`[live] tool call: ${inner.item.name} ${inner.item.arguments}`);
         void handleCalls([inner.item as PendingCall]);
       }
     });
@@ -168,11 +180,13 @@ export async function attachSideband(input: AttachInput): Promise<void> {
           // needs_review row rather than a dropped utterance.
         }
 
+        const started = Date.now();
         const result = await callTool(call.name, args, {
           moveId: input.moveId,
           actorId: input.packerId,
           actorType: "packer",
         });
+        console.log(`[live] tool ${call.name} -> ${Date.now() - started}ms ${JSON.stringify(result).slice(0, 200)}`);
 
         // No delegation_id here: the API rejects it on response.* events with
         // "Unknown parameter: 'delegation_id'", which silently swallowed every
