@@ -11,6 +11,7 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
   const [paused, setPaused] = useState(false);
   const [level, setLevel] = useState(0);
   const [rtc, setRtc] = useState<RTCPeerConnectionState | "">("");
+  const [needsSound, setNeedsSound] = useState(false);
   const [cameraFor, setCameraFor] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [lastUpload, setLastUpload] = useState<string>("");
@@ -20,6 +21,7 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
   const wsRef = useRef<WebSocket | null>(null);
   const wakeRef = useRef<WakeLockSentinel | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   /** Mute the mic locally when paused — crew chatter never leaves the phone. */
   useEffect(() => {
@@ -37,6 +39,12 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
     setStatus("connecting");
     setError("");
     try {
+      // Prime the element during the tap: mobile grants playback to a gesture.
+      if (audioRef.current) {
+        audioRef.current.muted = false;
+        await audioRef.current.play().catch(() => undefined);
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
@@ -50,12 +58,17 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
       pcRef.current = pc;
       for (const track of stream.getTracks()) pc.addTrack(track, stream);
 
-      // The model's voice comes back on this track.
-      const audio = new Audio();
-      audio.autoplay = true;
+      // The model's voice comes back on this track. It must play through a real
+      // <audio> element in the DOM: a detached `new Audio()` is refused by mobile
+      // browsers, which is silent — the model answers and the packer hears nothing.
       pc.ontrack = (e) => {
-        audio.srcObject = e.streams[0] ?? null;
-        void audio.play().catch(() => undefined);
+        const el = audioRef.current;
+        if (!el) return;
+        el.srcObject = e.streams[0] ?? null;
+        void el.play().catch((err) => {
+          setError(`Tap "Enable sound" — playback blocked: ${String(err)}`);
+          setNeedsSound(true);
+        });
       };
 
       const offer = await pc.createOffer({ offerToReceiveAudio: true });
@@ -143,6 +156,22 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-6 p-6">
+      <audio ref={audioRef} autoPlay playsInline className="hidden" />
+
+      {needsSound && (
+        <button
+          onClick={() => {
+            void audioRef.current?.play().then(() => {
+              setNeedsSound(false);
+              setError("");
+            });
+          }}
+          className="rounded-xl bg-sky-500 py-4 text-lg font-semibold text-black"
+        >
+          Enable sound
+        </button>
+      )}
+
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">MoveLog</h1>
         <span
