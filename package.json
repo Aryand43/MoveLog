@@ -1,0 +1,18 @@
+{
+  "name": "movelog",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/backend",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "npm -w @movelog/backend run dev",
+    "dev:web": "npm -w @movelog/web run dev",
+    "serve": "uv run --with modal --with python-dotenv modal serve modal_app.py",
+    "deploy": "uv run --with modal --with python-dotenv modal deploy modal_app.py"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}
