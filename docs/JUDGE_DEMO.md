@@ -1,179 +1,160 @@
-# MoveLog — judge demo script
+# MoveLog — 3-minute demo script
 
-**Format:** judges come to your corner, 15:30–16:30, ~7 min each. Finalists pitch 3 min + 3 min Q&A at 16:30.
-**One-line pitch:** *The agent rides in a packer's earbuds, posts to the ops Telegram group, and answers the customer in their own chat — the same agent, the same tools, the same state.*
+**One line:** *The agent rides in a packer's earbuds, posts to the ops Telegram group, and answers the customer in their own chat. Same agent, same tools, same state.*
 
-The spine of this demo is **one round trip**: the packer speaks, a card lands in Telegram, an ops person taps a button, and the packer hears the answer. Everything else is supporting cast. If you have 90 seconds, do only that.
+At 180 seconds the whole demo is **one round trip**: the packer speaks, a card lands in Telegram, ops taps a button, the packer hears the answer. Everything else is one sentence, not a beat.
 
----
-
-## 0. Pre-flight (do before the first judge arrives)
-
-- [ ] Backend up on Modal. `curl $MODAL_URL/health` returns `{"ok":true}`.
-- [ ] Ops Telegram group open on the **laptop**, scrolled clean. Delete old test cards.
-- [ ] Packer phone on `/pack/pack-tan001`, earbuds in, **screen-lock off**, Do Not Disturb on.
-- [ ] Second phone logged into Telegram as the customer, chat **unstarted** (so the `/start` deep link fires live).
-- [ ] Console open in a browser tab at `/dashboard`.
-- [ ] Know your two magic items: **oak dresser** is on the survey with "scratch left side". **Leather sofa** is on the survey with *no* known damage. That contrast is the whole demo.
-- [ ] Have the 2-minute video queued as a fallback if the venue wifi dies.
-
-**Speak the setup in one breath, not three:** "Moving crews log boxes on paper. Ops finds out tomorrow. When something's already damaged, nobody knows whose fault it is until the claim lands."
+**Budget:** ~250 words of narration. That is deliberate. The remaining 60 seconds are live action and silence, and the silence is what sells it. If you are still talking while the card lands, you have wasted the moment.
 
 ---
 
-## 1. The corner demo (6 minutes)
+## 0. Pre-flight — stage it, do not perform it
 
-### Beat 1 — Hand a judge the earbuds (0:00–1:30)
+The single biggest 3-minute mistake is demoing from a cold start. Pre-warm everything:
 
-> **Do this first.** Don't describe the voice agent. Put it in their ears.
+- [ ] Backend live: `curl $MODAL_URL/health` returns `{"ok":true}`.
+- [ ] **17 boxes already logged.** Progress must look like a real morning's work, not an empty app.
+- [ ] Ops Telegram group open on the laptop, scrolled clean, old cards deleted.
+- [ ] Packer phone on `/pack/pack-tan001`. Earbuds in **one ear** so you can still hear judges. Screen-lock off, Do Not Disturb on.
+- [ ] **Second phone: customer chat already open with the TV answer on screen.** You will hold it up for 8 seconds, not demo it live.
+- [ ] Damage prop within arm's reach. Know where the light is.
+- [ ] Video queued as a fallback.
 
-Give a judge one earbud and the phone. Ask them to say, in their own words:
+Rehearse the cut twice with a timer. Not the words, the *transitions*.
 
-> "Box twelve, kitchen. Glasses, the blender, two chopping boards. Fragile."
+---
 
-They hear back: *"Twelve, kitchen, three items, fragile."* Point at the console — the box appeared, the event feed moved.
+## 1. The script
 
-Then ask them to interrupt themselves:
+### 0:00–0:15 — The problem (two sentences, then stop)
+
+> "A packing crew logs a hundred boxes a day on paper. Ops finds out what's in them tomorrow, and when something's already damaged, nobody knows whose fault it is until the claim lands."
+
+Do not explain the product. Go straight to using it.
+
+### 0:15–0:45 — It logs by voice
+
+Phone in pocket. You speak, normally, not to a demo:
+
+> "Box eighteen, kitchen. Glasses, the blender, two chopping boards. Fragile."
+
+Agent: *"Eighteen, kitchen, three items, fragile."*
+
+Then interrupt yourself mid-flow:
 
 > "Actually put the phone chargers in that one too."
 
-**Say:** "That's not a form. He never took his hands off the tape gun."
+Agent: *"Added, four items."*
 
-Then let them ask it something:
+> "That's a conversation, not a form. His hands never left the tape gun."
 
-> "Where did the router go?"
+### 0:45–1:25 — It knows what is already broken
 
-**Say:** "Same tool the customer will call in a minute. One registry, three callers."
-
-### Beat 2 — Survey match vs. new damage (1:30–2:45)
-
-Ask the judge to report damage that *is* on the survey:
+First, damage that **is** on the pre-move survey:
 
 > "The oak dresser has a scratch on the left side."
 
-Agent: *"Noted, that one's on the survey."* Nothing escalates.
+Agent: *"Noted, that one's on the survey."*
 
-Now damage that is **not**:
+> "Nothing happens. That damage was already recorded before we arrived."
+
+Now damage that **is not**:
 
 > "The leather sofa has a tear on the back cushion."
 
-Agent: *"Not on the survey. Grab a photo."* The camera button appears on the phone.
+Agent: *"Not on the survey. Grab a photo."*
 
-**Say:** "It checked the pre-move survey before deciding this was worth anyone's time. Pre-existing damage doesn't wake the ops team."
+> "It checked the survey before deciding this was worth anyone's time."
 
-### Beat 3 — Photo, assessment, and the card (2:45–4:00)
+### 1:25–1:55 — Photo, assessment, card
 
-Let the judge take the photo of whatever prop you have. Then **stop talking and let it land.**
+Take the photo. **Then stop talking.**
 
-One request does the whole chain: store the image, call GPT‑5.6 Luna with a JSON schema, speak the verdict into the earbuds, and post the card to Telegram.
+One request stores the image, calls GPT‑5.6 Luna with a JSON schema, speaks the verdict into the earbuds, and posts to Telegram.
 
-The judge hears: *"Six-inch tear, minor, looks new. Logging it."*
-On the laptop, the card appears: photo, assessment, severity, survey verdict, and three buttons.
+Earbuds: *"Six-inch tear, minor, looks new. Logging it."*
+Laptop: the card lands with photo, assessment, severity, survey verdict, three buttons.
 
-**Say:** "The photo never goes into the voice session — GPT‑Live‑1 takes no images. It goes to Luna, and the text comes back into the conversation."
+Only once it is on screen:
 
-### Beat 4 — The round trip closes (4:00–5:00) ← **this is the demo**
+> "The photo never enters the voice session. GPT‑Live‑1 takes no images, so it goes to Luna and the text comes back into the conversation."
 
-**Ask the judge to tap the button themselves**, on the laptop or their own phone if they're in the group.
+### 1:55–2:25 — The round trip closes ← **the demo**
 
-They tap **Wrap and load**. Within a couple of seconds the packer's earbuds say:
+**Hand the laptop to a judge. Ask them to tap "Wrap and load."**
+
+This is your one interactive moment. It costs five seconds and it is the emotional beat: their tap, your earbuds.
+
+Two seconds later, out loud:
 
 > *"Ops says wrap and load. Claim opened."*
 
-The card rewrites itself in place with the decision and who made it.
+The card rewrites itself with the decision and who made it.
 
-**Say, once, plainly:** "Nobody opened a dashboard. Nobody typed. That round trip is the thing a chatbox can't do — it needs two people in two different places, each in the tool they're already in."
+> "Nobody opened a dashboard. Nobody typed. Two people, in two different tools, and neither of them left the one they were already in."
 
-### Beat 5 — Ops asks the database a question (5:00–5:30)
+### 2:25–2:40 — The third surface (hold up the phone, do not demo)
 
-In the ops group, type:
+Hold up the pre-staged customer phone.
 
-> "How many fragile boxes on TAN-001?"
+> "At handover the customer gets the same bot in their own chat, scoped to their move. 'Did my TV get packed?' — box, room, fragile flag. Same tools the packer just used. The model never gets a move ID as an argument; it's bound from the chat, so no customer can see another's move."
 
-It answers from ClickHouse. **Say:** "Read-only user, SELECT-only. The ops team queries the event log in the same thread where the cards land."
+### 2:40–3:00 — Close
 
-### Beat 6 — The customer (5:30–6:00)
+> "One agent, three surfaces. The packer's earbuds, the ops Telegram group, the customer's private chat. Every utterance is an immutable row in ClickHouse, so a damage claim six weeks from now can be argued from the transcript. No chatbox could carry that round trip alone."
 
-Scan the handover QR with the second phone. The `/start` deep link binds that chat to the move. Ask it:
-
-> "Did my TV get packed?"
-
-**Say:** "Same bot, same tools, scoped to one move. The customer can't see another customer's move, and the model never gets a move ID as an argument — it's bound from the chat."
+**Leave the card on screen when you stop talking.**
 
 ---
 
-## 2. What to say when they ask "what's actually built?"
+## 2. Cut rules, in order
 
-Be straight. It scores better than hedging.
+If you are behind at 1:25, cut in this order. Never cut the round trip.
 
-| Works live | Status |
-|---|---|
-| Voice logging, corrections, retrieval | Working end to end |
-| Survey check, discrepancy, photo, Luna assessment | Working end to end |
-| Telegram card, buttons, decision spoken back | Working end to end |
-| Ops natural-language queries over ClickHouse | Working |
-| Customer deep link and scoped Q&A | Working |
-| Web console (dashboard, review, manifest) | Working, on local mock state |
-| Escalation timer (Trigger.dev) | Not built. Say so. |
-
-**Do not claim the console is wired to the backend.** It runs on mock state for demo reliability. If asked: "The console is the ops surface we'd ship; today it runs on seeded state so it demos the same way every time. The live surfaces are the earbuds and Telegram."
+1. The customer phone (2:25). Fold it into the close as one clause.
+2. The mid-flow correction (0:30). Log the box and move on.
+3. The oak dresser (0:45). Go straight to the sofa. **Costs you the restraint point** — only if desperate.
+4. The problem statement down to one sentence.
 
 ---
 
-## 3. Q&A prep (grounded in the code)
+## 3. Q&A (you get ~3 minutes of this)
 
-**"Isn't this just a voice wrapper on a chatbot?"**
-No. The voice model holds no tools. It delegates every call to a backend agent over a sideband WebSocket, and that backend is the same tool registry the Telegram agents call. `find_item` and `move_status` are literally the same handlers on all three surfaces.
+**"Isn't this a voice wrapper on a chatbot?"**
+The voice model holds no tools. It delegates every call over a sideband WebSocket to a backend agent, and that backend is the same registry the Telegram agents call. `find_item` and `move_status` are the same handlers on all three surfaces.
 
-**"What happens when the network drops mid-move?"**
-The sideband reconnects, up to five attempts. A tool failure never drops an utterance — it writes a `needs_review` event and returns a short error the voice model can say out loud. The rule is that the packer always gets told, never silently ignored.
+**"What if the network drops mid-move?"**
+The sideband reconnects, five attempts. A tool failure never drops an utterance: it writes a `needs_review` event and returns a short error the voice model says out loud. The packer is always told.
 
-**"What stops a customer seeing another customer's move?"**
-The move ID is never a model argument on the customer surface. It's resolved from the Telegram chat ID via `moveForChat()` and injected into the tool context. The model cannot ask for a different one.
+**"Could a customer see another customer's move?"**
+No. The move ID is never a model argument on that surface. It resolves from the Telegram chat ID via `moveForChat()` into the tool context.
 
-**"Double-tap on the button?"**
-`resolve_discrepancy` is idempotent. A second tap re-states the standing decision rather than overwriting it.
+**"What if ops taps twice?"**
+`resolve_discrepancy` is idempotent. The second tap re-states the standing decision rather than overwriting it.
 
-**"Why Telegram and not Slack?"**
-CopilotKit Channels direct adapter, one bot token, long-polling, no public webhook or workspace admin. WhatsApp and Slack are adapter swaps in the same `createChannel` call. Ops group and customer DM share one process, routed on chat ID.
+**"Why Telegram, not Slack?"**
+Direct CopilotKit Channels adapter: one bot token, long-polling, no webhook or workspace admin. Slack and WhatsApp are adapter swaps in the same `createChannel` call. The ops group and every customer DM share one process, routed on chat ID.
 
 **"Why ClickHouse for a hundred boxes?"**
-It's event-sourced, not a CRUD app. Every utterance and tool call is an immutable row with the raw transcript. Current state is a query with `FINAL`, not a mutable table. That's the audit trail a damage claim is argued from six weeks later.
+It is event-sourced, not CRUD. Every utterance and tool call is an immutable row carrying the raw transcript. Current state is a `FINAL` query, not a mutable table. That is the audit trail a claim is argued from.
 
-**"How do you handle two packers?"**
-Box IDs are prefixed per packer (A12, B7), so two crews never collide and need no coordination. That's also how real crews label.
-
----
-
-## 4. Rubric map (what each beat is buying you)
-
-| Criterion | The beat that earns it |
-|---|---|
-| **Core requirements & functionality** | Beats 1–4 run live, end to end, in front of them. Let the judge drive. |
-| **Innovation & theme alignment** | Beat 4. Say the "two people, two places" line out loud — don't let them infer it. |
-| **Technical execution** | The Q&A answers: sideband reconnect, idempotency, never-drop-an-utterance, chat-bound scoping, event sourcing. |
-| **Usefulness & agentic experience** | Beat 2. The agent *declines* to escalate pre-existing damage. Restraint reads as judgement. |
+**"What isn't built?"**
+The Trigger.dev escalation timer. And the web console runs on seeded state, not the backend — the live surfaces are the earbuds and Telegram. Say this plainly; volunteering it costs less than being caught.
 
 ---
 
-## 5. If something breaks
+## 4. If it breaks
+
+At three minutes there is no recovery time. One failure, one pivot, keep moving.
 
 | Breaks | Do |
 |---|---|
-| Voice won't connect | Go straight to the ops group. Type a question, show the tools answering. Then play the video. |
-| Card doesn't arrive | Say the real latency, don't wait in silence. Show `/internal/test-card` posting a card, then move to Beat 5. |
-| Luna returns nonsense | Re-shoot with better light. Never edit the assessment text in front of a judge. |
-| Wifi dies entirely | Play the 2-minute video, then walk the architecture on the whiteboard. The Q&A answers still score. |
-
-**One recovery on camera is credibility. Two is a pattern.** If the second thing fails, stop demoing and talk architecture.
+| Voice won't connect | Straight to the ops group: type "how many fragile boxes on TAN-001?" and let the tools answer. Then the close. |
+| Card doesn't arrive in 8s | Say the real latency out loud, keep going, show the card when it lands. Never wait in silence for a thing that may not come. |
+| Two things fail | Stop demoing. Play the video and spend the rest on architecture. The Q&A answers still score. |
 
 ---
 
-## 6. Finalist pitch (3 min), if you make it
+## 5. If you get a longer corner slot
 
-- **0:00–0:20** The problem, in one breath. Paper, tomorrow, the claim.
-- **0:20–1:40** The round trip, live. Beat 1 compressed, then Beats 3 and 4 in full.
-- **1:40–2:20** Same agent, three surfaces. One registry, chat-bound scoping, event-sourced log.
-- **2:20–3:00** Close: *"It meets the packer in their earbuds, ops in their Telegram group, and the customer in a private chat. No chatbox could carry that round trip alone."*
-
-Leave the round trip on screen when you stop talking.
+Same spine, expanded. Add in this order: hand a judge the earbuds and let them log a box in their own words (the strongest interaction you have, but too risky at 3 min); let them ask "where did the router go?"; type a natural-language query in the ops group and let it hit ClickHouse; scan the handover QR live instead of pre-staging it.
