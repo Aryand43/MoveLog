@@ -107,8 +107,9 @@ export async function setCustomerChat(move_id: string, chat_id: string): Promise
   await upsertMove({ ...m, customer_chat_id: chat_id });
 }
 
+/** An unbound move has customer_chat_id = '', so an empty id must never match. */
 export const moveForChat = async (chat_id: string): Promise<MoveRow | null> =>
-  (await rows<MoveRow>(
+  chat_id === "" ? null : (await rows<MoveRow>(
     `SELECT * FROM moves FINAL WHERE customer_chat_id = {chat_id:String} LIMIT 1`, { chat_id },
   ))[0] ?? null;
 

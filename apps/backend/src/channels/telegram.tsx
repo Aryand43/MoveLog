@@ -40,7 +40,10 @@ export async function startChannels(): Promise<void> {
   });
 
   channel.onMessage(async ({ thread, message }) => {
-    const chatId = String((message.ref as { chatId?: string | number }).chatId ?? "");
+    // thread.conversationKey is "tg:<chatId>:<scope>" and is always populated;
+    // message.ref.chatId is not, and an empty id here used to match any move
+    // whose customer_chat_id was still unset.
+    const chatId = chatIdOf(thread.conversationKey);
     if (chatId && !seenChats.has(chatId)) {
       seenChats.add(chatId);
       console.log(`[channels] chat ${chatId} ${isOpsChat(chatId) ? "(ops group)" : ""}`);
@@ -79,7 +82,7 @@ export async function startChannels(): Promise<void> {
       return;
     }
 
-    const move = await moveForChat(chatId);
+    const move = chatId ? await moveForChat(chatId) : null;
     if (!move) {
       await thread.post(
         "Open the link your mover sent you to connect this chat to your move.",
