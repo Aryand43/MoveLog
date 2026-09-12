@@ -1,5 +1,11 @@
-import "dotenv/config";
+import { fileURLToPath } from "node:url";
+import { config } from "dotenv";
 import { z } from "zod";
+
+// The workspace root holds the single .env; the backend runs from apps/backend.
+// Never overrides real env vars, so Modal secrets win in production.
+config();
+config({ path: fileURLToPath(new URL("../../../.env", import.meta.url)) });
 
 // Required everywhere. Anything optional is gated by the phase that needs it.
 const schema = z.object({
@@ -24,7 +30,12 @@ const schema = z.object({
   TRIGGER_SECRET_KEY: z.string().optional(),
 });
 
-const parsed = schema.safeParse(process.env);
+// Treat a blank var as absent — `PUBLIC_BASE_URL=` in .env must not fail .url().
+const present = Object.fromEntries(
+  Object.entries(process.env).filter(([, v]) => v !== undefined && v.trim() !== ""),
+);
+
+const parsed = schema.safeParse(present);
 if (!parsed.success) {
   console.error("[env] invalid configuration:");
   for (const issue of parsed.error.issues) {
