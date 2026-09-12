@@ -98,16 +98,28 @@ photos.post("/photo/:discrepancyId", async (c) => {
     await say(d.move_id, `Photo received on the ${d.item_name}. Sent to ops for a look.`);
   }
 
-  const ref = await postDiscrepancyCard({
-    discrepancy: updated,
-    assessment,
-    photoUrl,
-    surveyMatch: knownDamage ? `${near?.item.item}: ${knownDamage}` : undefined,
-  });
-
-  if (ref) {
-    await upsertDiscrepancy({ ...updated, telegram_message_id: String(ref.id) });
+  // A card that fails to post must not fail the packer's upload: the photo is
+  // already stored and assessed, and the packer is standing there waiting.
+  let cardError = "";
+  try {
+    const ref = await postDiscrepancyCard({
+      discrepancy: updated,
+      assessment,
+      photoUrl,
+      surveyMatch: knownDamage ? `${near?.item.item}: ${knownDamage}` : undefined,
+    });
+    if (ref) await upsertDiscrepancy({ ...updated, telegram_message_id: String(ref.id) });
+  } catch (err) {
+    cardError = err instanceof Error ? err.message : String(err);
+    console.error(`[photos] card post failed for ${id}: ${cardError}`);
+    await insertEvent({
+      move_id: d.move_id, actor_id: "system", actor_type: "system",
+      event_type: "needs_review", discrepancy_id: id,
+      payload: { stage: "card_post", error: cardError, needs_review: 1 },
+    });
   }
 
-  return c.json({ ok: true, discrepancy_id: id, photo_url: photoUrl, assessment, assessmentError });
+  return c.json({
+    ok: true, discrepancy_id: id, photo_url: photoUrl, assessment, assessmentError, cardError,
+  });
 });
