@@ -9,6 +9,7 @@
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
+    "jsxImportSource": "@copilotkit/channels",
     "outDir": "dist",
     "rootDir": "src",
     "resolveJsonModule": true,

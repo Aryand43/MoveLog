@@ -17,7 +17,9 @@ export const chReadonly: ClickHouseClient = env.CLICKHOUSE_RO_USER
       username: env.CLICKHOUSE_RO_USER,
       password: env.CLICKHOUSE_RO_PASSWORD ?? "",
       database: env.CLICKHOUSE_DB,
-      clickhouse_settings: { readonly: "1", max_execution_time: 5 },
+      // No clickhouse_settings here: the movelog_ro user is created with
+      // readonly = 1, and that mode forbids changing any setting — including
+      // max_execution_time. The query timeout is enforced client-side instead.
     })
   : ch;
 
