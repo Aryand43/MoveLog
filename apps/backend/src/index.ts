@@ -10,6 +10,10 @@ import { seed } from "./db/seed.js";
 import { api } from "./http/api.js";
 import { startChannels, stopChannels } from "./channels/telegram.js";
 import { postDiscrepancyCard } from "./channels/post.js";
+import { wireDecisionHandler } from "./channels/decisions.js";
+import { live } from "./live/session.js";
+import { attachPhoneSocket } from "./http/ws.js";
+import { photos } from "./http/photos.js";
 
 const app = new Hono();
 
@@ -22,6 +26,8 @@ app.get("/health", (c) => c.json({ ok: true, base_url: baseUrl }));
 app.use("/photos/*", serveStatic({ root: env.PHOTOS_DIR, rewriteRequestPath: (p) => p.replace(/^\/photos/, "") }));
 
 app.route("/", api);
+app.route("/", live);
+app.route("/", photos);
 
 // Phase 1 acceptance probe: posts a card with a real photo URL and three buttons.
 app.post("/internal/test-card", async (c) => {
@@ -54,10 +60,12 @@ async function main(): Promise<void> {
   await seed();
 
   await startChannels();
+  wireDecisionHandler();
 
-  serve({ fetch: app.fetch, port: env.PORT, hostname: "0.0.0.0" }, (info) => {
+  const server = serve({ fetch: app.fetch, port: env.PORT, hostname: "0.0.0.0" }, (info) => {
     console.log(`[boot] ready on :${info.port} — public ${baseUrl}`);
   });
+  attachPhoneSocket(server as unknown as import("node:http").Server);
 
   for (const sig of ["SIGINT", "SIGTERM"] as const) {
     process.on(sig, () => {

@@ -197,3 +197,12 @@ export const listDiscrepancies = (move_id: string): Promise<DiscrepancyRow[]> =>
     `SELECT * FROM discrepancies FINAL WHERE move_id = {move_id:String} ORDER BY updated_at DESC`,
     { move_id },
   );
+
+export const parseAssessment = (d: DiscrepancyRow): unknown | null => {
+  try {
+    const parsed = JSON.parse(d.assessment) as Record<string, unknown>;
+    return Object.keys(parsed).length > 0 ? parsed : null;
+  } catch {
+    return null;
+  }
+};
