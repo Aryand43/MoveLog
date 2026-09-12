@@ -1,29 +1,30 @@
 # MoveLog / MoveMate
 
-Hackathon build: a voice agent for movers and packers. One agent on three surfaces —
-the packer's earbuds (GPT‑Live‑1), the ops team's Telegram group (CopilotKit Channels),
-and the customer's private chat — over an event-sourced ClickHouse store.
+A voice agent for movers and packers. One agent on three surfaces — the packer's earbuds
+(GPT‑Live‑1), the ops team's Telegram group (CopilotKit Channels), and the customer's private
+chat — over an event-sourced ClickHouse store.
 
-Build plan: `PLAN.md` (not yet committed — see Downloads).
+The packer narrates what they pack. Damage that isn't on the pre-move survey gets photographed,
+assessed by GPT‑5.6 Luna, and posted to the ops Telegram group as a card with buttons; the ops
+decision is spoken back into the packer's live session seconds later.
 
-## Video
+Build plan and phase order: [`PLAN.md`](PLAN.md). Verified API notes: [`docs/api-notes.md`](docs/api-notes.md).
+
+## Layout
 
 | Path | What |
 |---|---|
-| [`video/`](video/) | HyperFrames project — the animated walkthrough, source and render |
-| [`video/renders/movemate-walkthrough.mp4`](video/renders/movemate-walkthrough.mp4) | 2:01 · 1920×1080 · 30fps · silent, burned-in captions |
-| [`video/build.mjs`](video/build.mjs) | Generates `index.html`; all copy and timings live in the DATA blocks at the top |
-| [`docs/DEMO_VIDEO.md`](docs/DEMO_VIDEO.md) | Shooting script for the **real** demo video, once the product runs |
+| `apps/backend` | Node/TS service — tools, ClickHouse, Telegram channel, live voice session, photo assessment |
+| `apps/web` | Next.js — `/pack/[token]` voice page, `/admin` dashboard, `/m/[token]` customer manifest |
+| `modal_app.py` | Modal deployment (single container — in-memory session registry + one Telegram poller) |
+| `demo-video/` | The walkthrough video, its source, and the shooting script for the real demo |
 
-The walkthrough is an **animated illustration of the concept**, not a recording of a working
-build — the title card says so on screen and the damage photo is labelled as an illustration.
-Use it as a pitch/explainer piece or as B-roll. The real demo gets shot per `docs/DEMO_VIDEO.md`.
-
-### Rebuilding the video
+## Running
 
 ```bash
-cd video && node build.mjs && npx hyperframes check && npx hyperframes render --quality high
+./scripts/dev.sh backend   # modal serve — public HTTPS + hot reload, prints the URL
+./scripts/dev.sh web       # next dev on :3000
+./scripts/dev.sh local     # backend on localhost:8080 (no public URL, no phone)
 ```
 
-`check` must pass clean (lint + runtime + layout + motion + WCAG contrast) before rendering.
-Preview while iterating with `npx hyperframes preview --background`.
+Copy `.env.example` to `.env` first. No auth beyond opaque tokens in URLs.
