@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import QRCode from "qrcode";
 
 type Status = "idle" | "connecting" | "live" | "error";
 
@@ -12,6 +13,8 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
   const [level, setLevel] = useState(0);
   const [rtc, setRtc] = useState<RTCPeerConnectionState | "">("");
   const [needsSound, setNeedsSound] = useState(false);
+  const [handover, setHandover] = useState<{ customer_link: string; manifest_url: string } | null>(null);
+  const [qr, setQr] = useState("");
   const [cameraFor, setCameraFor] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [lastUpload, setLastUpload] = useState<string>("");
@@ -130,6 +133,13 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
     setLevel(0);
   }, []);
 
+  useEffect(() => {
+    if (!handover?.customer_link) return;
+    void QRCode.toDataURL(handover.customer_link, { width: 440, margin: 1 })
+      .then(setQr)
+      .catch(() => setQr(""));
+  }, [handover]);
+
   /** Control socket: the backend opens the camera through this. */
   useEffect(() => {
     const url = `${API.replace(/^http/, "ws")}/pack-ws?token=${encodeURIComponent(token)}`;
@@ -137,9 +147,15 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
     wsRef.current = ws;
     ws.onmessage = (e) => {
       try {
-        const msg = JSON.parse(e.data as string) as { type: string; discrepancy_id?: string; paused?: boolean };
+        const msg = JSON.parse(e.data as string) as {
+          type: string; discrepancy_id?: string; paused?: boolean;
+          customer_link?: string; manifest_url?: string;
+        };
         if (msg.type === "camera" && msg.discrepancy_id) setCameraFor(msg.discrepancy_id);
         if (msg.type === "paused") setPaused(!!msg.paused);
+        if (msg.type === "handover") {
+          setHandover({ customer_link: msg.customer_link ?? "", manifest_url: msg.manifest_url ?? "" });
+        }
       } catch {
         /* ignore malformed control frames */
       }
@@ -245,6 +261,31 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
               if (f) void upload(f);
             }}
           />
+        </div>
+      )}
+
+      {handover && (
+        <div className="space-y-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-center">
+          <p className="font-medium text-emerald-200">Move complete — hand this to the customer</p>
+          {qr && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              alt="QR code linking the customer to their move"
+              className="mx-auto rounded-lg bg-white p-2"
+              width={220}
+              height={220}
+              src={qr}
+            />
+          )}
+          <p className="text-sm text-neutral-300">Scan to chat with MoveLog about this move.</p>
+          <a
+            href={handover.manifest_url}
+            target="_blank"
+            rel="noreferrer"
+            className="block truncate text-sm text-emerald-300 underline"
+          >
+            {handover.manifest_url}
+          </a>
         </div>
       )}
 
