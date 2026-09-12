@@ -1,0 +1,103 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-page: var(--page);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-border: var(--sidebar-border);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.625rem;
+
+  /* Surfaces: white cards on a cool off-white page, so cards read as raised. */
+  --page: #f4f7fa;
+  --background: #ffffff;
+  --foreground: #0d1b2e;          /* dark navy ink */
+  --card: #ffffff;
+  --card-foreground: #0d1b2e;
+  --popover: #ffffff;
+  --popover-foreground: #0d1b2e;
+
+  /* One accent. Dark enough to carry white text at AA. */
+  --primary: #04785c;
+  --primary-foreground: #ffffff;
+  --accent: #ecfdf6;
+  --accent-foreground: #04614a;
+
+  --secondary: #eef2f7;
+  --secondary-foreground: #0d1b2e;
+  --muted: #f1f5f9;
+  --muted-foreground: #54637a;    /* 6.2:1 on white */
+
+  --destructive: #b3261e;
+  --destructive-foreground: #ffffff;
+  --warning: #97590a;
+  --warning-foreground: #ffffff;
+
+  --border: #e3e8ef;
+  --input: #cbd5e1;
+  --ring: #04785c;
+
+  /* Navy rail — the console's anchor. */
+  --sidebar: #0e1f38;
+  --sidebar-foreground: #e8eef7;
+  --sidebar-muted: #9db0c9;       /* 7.4:1 on the rail */
+  --sidebar-hover: #182d4b;
+  --sidebar-active-bg: rgba(16, 185, 129, 0.16);
+  --sidebar-active-fg: #6ee7b7;   /* 9.1:1 on the rail */
+  --sidebar-border: #1d3354;
+}
+
+
+@layer base {
+  * { @apply border-border; }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+  }
+  /* One visible, consistent focus ring everywhere. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+}
+
+@utility tabular { font-variant-numeric: tabular-nums; }
+
+/* Respect users who don't want motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
