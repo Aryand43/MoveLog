@@ -1,0 +1,496 @@
+<title>MoveMate Walkthrough</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0c10; --panel:#141920; --panel2:#1b222c; --line:#2a3340;
+  --ink:#eef3f8; --dim:#8a99ab; --amber:#f2a355; --cyan:#5fd3dc;
+  --red:#ef5d52; --green:#4fc98a; --tg:#2b5278; --tgbg:#17212b;
+}
+html,body{height:100%;background:#000;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,system-ui,sans-serif}
+#stage{position:absolute;top:50%;left:50%;width:1280px;height:720px;margin:-360px 0 0 -640px;
+  background:var(--bg);color:var(--ink);overflow:hidden}
+#stage::before{content:"";position:absolute;inset:0;opacity:.35;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:64px 64px;mask-image:radial-gradient(ellipse 90% 70% at 50% 45%,#000 30%,transparent 100%)}
+.scene{position:absolute;inset:0;opacity:0;transition:opacity .5s ease;pointer-events:none}
+.scene.on{opacity:1}
+
+/* ---------- captions ---------- */
+#cap{position:absolute;left:50%;transform:translateX(-50%);bottom:34px;max-width:960px;
+  padding:11px 22px;background:rgba(6,8,11,.86);border:1px solid var(--line);border-radius:10px;
+  font-size:21px;line-height:1.42;text-align:center;opacity:0;transition:opacity .35s;z-index:60;
+  backdrop-filter:blur(6px)}
+#cap.on{opacity:1}
+#cap b{color:var(--amber);font-weight:600}
+#cap i{color:var(--cyan);font-style:normal}
+
+/* ---------- timer ---------- */
+#timer{position:absolute;top:20px;left:50%;transform:translateX(-50%);z-index:60;
+  padding:8px 18px;border-radius:999px;background:rgba(239,93,82,.12);border:1px solid rgba(239,93,82,.5);
+  font:600 17px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#ff9d94;opacity:0;transition:opacity .4s}
+#timer.on{opacity:1}
+#timer.done{background:rgba(79,201,138,.14);border-color:rgba(79,201,138,.55);color:#7fe6b0}
+
+/* ---------- title ---------- */
+.tw{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+.logo{font-size:76px;font-weight:700;letter-spacing:-2.5px}
+.logo span{color:var(--amber)}
+.tag{font-size:23px;color:var(--dim);letter-spacing:.2px}
+.rule{width:74px;height:3px;background:var(--amber);border-radius:2px}
+.badge{position:absolute;bottom:104px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:13px;color:#5d6b7c;letter-spacing:2.2px;text-transform:uppercase}
+
+/* problem lines */
+.prob{display:flex;flex-direction:column;gap:26px;align-items:flex-start;width:760px}
+.pl{font-size:31px;line-height:1.3;opacity:0;transform:translateY(14px);transition:all .55s cubic-bezier(.2,.7,.3,1);color:#c6d2de}
+.pl.on{opacity:1;transform:none}
+.pl b{color:#fff;font-weight:600}
+
+/* three surfaces */
+.surf{display:flex;gap:26px;align-items:stretch;justify-content:center;height:100%;padding:150px 60px 120px}
+.sc{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:30px 26px;
+  display:flex;flex-direction:column;gap:13px;opacity:0;transform:translateY(22px);transition:all .6s cubic-bezier(.2,.7,.3,1)}
+.sc.on{opacity:1;transform:none}
+.sc .ic{font-size:42px}
+.sc h3{font-size:22px;font-weight:600}
+.sc p{font-size:16px;color:var(--dim);line-height:1.5}
+.sc .who{margin-top:auto;font-size:13px;letter-spacing:1.6px;text-transform:uppercase;color:var(--amber)}
+
+/* ---------- phone ---------- */
+.phone{width:326px;height:540px;border-radius:38px;background:#05070a;border:9px solid #222a35;
+  box-shadow:0 30px 70px rgba(0,0,0,.6);padding:16px 15px;display:flex;flex-direction:column;gap:11px;position:relative;flex:none}
+.notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:96px;height:19px;background:#222a35;border-radius:0 0 11px 11px}
+.ph-top{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--dim);padding-top:12px}
+.ph-title{font-size:15px;font-weight:600;color:var(--ink)}
+.ph-pill{display:inline-flex;align-items:center;gap:7px;font-size:12px;padding:5px 11px;border-radius:999px;
+  background:rgba(79,201,138,.13);color:#7fe6b0;border:1px solid rgba(79,201,138,.35)}
+.ph-pill.paused{background:rgba(242,163,83,.13);color:var(--amber);border-color:rgba(242,163,83,.4)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.wave{height:46px;display:flex;align-items:center;justify-content:center;gap:4px}
+.wave i{width:4px;border-radius:2px;background:var(--cyan);height:8px;opacity:.55}
+.wave.live i{animation:bar .75s ease-in-out infinite}
+.wave i:nth-child(2n){animation-delay:.1s}.wave i:nth-child(3n){animation-delay:.22s}
+.wave i:nth-child(4n){animation-delay:.33s}.wave i:nth-child(5n){animation-delay:.15s}
+@keyframes bar{0%,100%{height:7px;opacity:.45}50%{height:34px;opacity:1}}
+.tr{flex:1;overflow:hidden;display:flex;flex-direction:column;gap:9px;padding:3px 1px}
+.b{max-width:87%;padding:10px 13px;border-radius:14px;font-size:14.5px;line-height:1.38;
+  opacity:0;transform:translateY(10px);transition:all .4s cubic-bezier(.2,.7,.3,1)}
+.b.on{opacity:1;transform:none}
+.b.me{align-self:flex-end;background:#2c3542;border-bottom-right-radius:4px}
+.b.ag{align-self:flex-start;background:rgba(95,211,220,.13);border:1px solid rgba(95,211,220,.28);
+  color:#c9f2f5;border-bottom-left-radius:4px}
+.b.ag::before{content:"MoveMate";display:block;font-size:10px;letter-spacing:1.3px;color:var(--cyan);margin-bottom:4px;text-transform:uppercase}
+.camb{padding:13px;border-radius:13px;background:var(--amber);color:#1a1206;font-weight:650;font-size:15px;
+  text-align:center;opacity:0;transform:scale(.9);transition:all .4s cubic-bezier(.2,.9,.3,1.3)}
+.camb.on{opacity:1;transform:none;animation:glow 1.3s infinite}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 rgba(242,163,83,.5)}50%{box-shadow:0 0 0 13px rgba(242,163,83,0)}}
+
+/* ---------- feed ---------- */
+.feed{width:412px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:17px;display:flex;flex-direction:column;gap:11px;flex:none}
+.feed h4{font-size:12px;letter-spacing:1.8px;text-transform:uppercase;color:var(--dim);display:flex;justify-content:space-between;align-items:center}
+.feed h4 em{font-style:normal;color:var(--green);font-size:11px}
+.rows{display:flex;flex-direction:column;gap:6px;font:12.5px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace}
+.r{display:flex;gap:9px;padding:7px 9px;background:#0e131a;border-left:2px solid var(--cyan);border-radius:5px;
+  opacity:0;transform:translateX(-10px);transition:all .35s}
+.r.on{opacity:1;transform:none}
+.r .t{color:#5d6b7c;flex:none}
+.r .e{color:var(--cyan)}
+.r.warn{border-left-color:var(--red)}.r.warn .e{color:#ff9d94}
+.r.ok{border-left-color:var(--green)}.r.ok .e{color:#7fe6b0}
+.boxcard{background:#0e131a;border:1px solid var(--line);border-radius:11px;padding:13px;opacity:0;transition:opacity .4s}
+.boxcard.on{opacity:1}
+.boxcard .bh{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.boxcard .bn{font-size:19px;font-weight:650}
+.boxcard .rm{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:1.3px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-size:12px;padding:4px 9px;border-radius:6px;background:#1d2530;color:#b9c7d6;
+  opacity:0;transform:scale(.85);transition:all .3s cubic-bezier(.2,.9,.3,1.4)}
+.chip.on{opacity:1;transform:none}
+.chip.frag{background:rgba(242,163,83,.15);color:var(--amber)}
+
+/* ---------- telegram ---------- */
+.tg{width:452px;max-height:524px;background:var(--tgbg);border:1px solid #24313d;border-radius:14px;overflow:hidden;
+  display:flex;flex-direction:column;flex:none;box-shadow:0 22px 55px rgba(0,0,0,.5)}
+.tg-head{padding:13px 17px;background:#1f2c3a;display:flex;align-items:center;gap:11px;border-bottom:1px solid #24313d}
+.tg-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#f2a355,#e0762f);
+  display:grid;place-items:center;font-size:17px}
+.tg-head .n{font-size:15px;font-weight:600}
+.tg-head .s{font-size:11.5px;color:#6d8399}
+.tg-body{flex:1;min-height:0;padding:15px;display:flex;flex-direction:column;justify-content:flex-end;gap:11px;overflow:hidden}
+.tgm{max-width:86%;padding:9px 13px;border-radius:12px;background:#212e3c;font-size:14px;line-height:1.4;
+  opacity:0;transform:translateY(10px);transition:all .4s}
+.tgm.on{opacity:1;transform:none}
+.tgm.out{align-self:flex-end;background:var(--tg)}
+.card{background:#212e3c;border-radius:12px;overflow:hidden;opacity:0;transform:translateY(18px) scale(.97);
+  transition:all .55s cubic-bezier(.2,.8,.3,1.1)}
+.card.on{opacity:1;transform:none}
+.card-h{padding:11px 14px;background:rgba(239,93,82,.16);border-bottom:1px solid rgba(239,93,82,.3);
+  font-size:14px;font-weight:650;color:#ffb0a8;display:flex;gap:8px;align-items:center}
+.card-b{padding:13px 14px;display:flex;flex-direction:column;gap:11px}
+.shot{height:64px;border-radius:9px;overflow:hidden;position:relative;background:#0d1117}
+.shot svg{width:100%;height:100%;display:block}
+.shot .lbl{position:absolute;bottom:6px;left:8px;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;
+  color:#93a5b8;background:rgba(0,0,0,.55);padding:3px 7px;border-radius:4px}
+.fl{display:flex;gap:10px;font-size:13px;line-height:1.45}
+.fl .k{color:#7d93a8;width:106px;flex:none}
+.fl .v{color:#e3ebf3}
+.fl .v.no{color:#ff9d94;font-weight:600}
+.acts{display:flex;flex-direction:column;gap:7px;padding:0 14px 13px}
+.btn{padding:9px;border-radius:8px;background:#2b3d4f;text-align:center;font-size:13.5px;font-weight:600;color:#cfe0ef;
+  border:1px solid #36495d;transition:all .2s;position:relative}
+.btn.hot{background:#3a6ea5;border-color:#4d86c4;color:#fff}
+.btn.gone{opacity:.28}
+.decided{padding:9px 14px;margin:0 14px 13px;border-radius:9px;background:rgba(79,201,138,.13);
+  border:1px solid rgba(79,201,138,.4);font-size:13.5px;color:#8fe9b8;opacity:0;transform:translateY(8px);transition:all .45s}
+.decided.on{opacity:1;transform:none}
+.decided b{display:block;font-size:15px;color:#b6f3d3;margin-bottom:3px}
+
+#cursor{position:absolute;width:22px;height:22px;z-index:70;opacity:0;transition:opacity .3s;
+  filter:drop-shadow(0 2px 5px rgba(0,0,0,.8));pointer-events:none}
+#cursor.on{opacity:1}
+.ripple{position:absolute;width:16px;height:16px;border-radius:50%;border:2px solid #fff;z-index:69;
+  opacity:0;pointer-events:none}
+.ripple.go{animation:rip .55s ease-out}
+@keyframes rip{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(3.6)}}
+
+/* ---------- layout rows ---------- */
+.row{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:34px;padding:40px 56px 112px}
+.hdr{position:absolute;top:30px;left:56px;font-size:13px;letter-spacing:2.4px;text-transform:uppercase;color:#5d6b7c}
+.hdr b{color:var(--amber);font-weight:600}
+
+/* manifest */
+.man{width:470px;background:#fff;color:#1a1f26;border-radius:13px;overflow:hidden;flex:none;box-shadow:0 22px 55px rgba(0,0,0,.5)}
+.man-h{padding:15px 18px;background:#f3f5f8;border-bottom:1px solid #e2e7ee}
+.man-h .t1{font-size:17px;font-weight:700}
+.man-h .t2{font-size:12.5px;color:#6b7684;margin-top:2px}
+.man-b{padding:14px 18px;display:flex;flex-direction:column;gap:11px}
+.mrow{display:flex;justify-content:space-between;align-items:center;padding:9px 11px;background:#f7f9fb;
+  border:1px solid #e7ecf2;border-radius:8px;font-size:13px;opacity:0;transform:translateY(8px);transition:all .4s}
+.mrow.on{opacity:1;transform:none}
+.mrow .bx{font-weight:700}
+.mrow .it{color:#6b7684;font-size:12px}
+.mrow .tag2{font-size:11px;padding:3px 8px;border-radius:5px;background:#fdf0e2;color:#a2621f;font-weight:600}
+.cond{margin:0 18px 16px;padding:11px 13px;border-radius:9px;background:#fef4f3;border:1px solid #f8ddd9;
+  font-size:12.5px;color:#8a3b33;opacity:0;transition:opacity .4s}
+.cond.on{opacity:1}
+.cond b{display:block;margin-bottom:4px;font-size:13px}
+
+/* close */
+.arch{display:flex;gap:16px;align-items:center;justify-content:center;margin-top:8px}
+.ab{padding:13px 20px;border:1px solid var(--line);border-radius:11px;background:var(--panel);text-align:center;
+  opacity:0;transform:translateY(12px);transition:all .5s}
+.ab.on{opacity:1;transform:none}
+.ab .i2{font-size:25px}
+.ab .l2{font-size:13px;color:var(--dim);margin-top:5px}
+.arrow{color:var(--amber);font-size:24px;opacity:0;transition:opacity .5s}
+.arrow.on{opacity:1}
+.kicker{font-size:26px;line-height:1.45;max-width:880px;text-align:center;color:#d7e2ed;opacity:0;transform:translateY(12px);transition:all .6s}
+.kicker.on{opacity:1;transform:none}
+.kicker b{color:var(--amber);font-weight:600}
+.stackline{font-size:13.5px;color:#5d6b7c;letter-spacing:1.5px;opacity:0;transition:opacity .5s}
+.stackline.on{opacity:1}
+</style>
+
+<div id="stage">
+  <div id="timer">00.0s</div>
+
+  <!-- 1 TITLE -->
+  <div class="scene" id="s1">
+    <div class="tw">
+      <div class="logo">Move<span>Mate</span></div>
+      <div class="rule"></div>
+      <div class="tag">One agent. Three surfaces. Zero keyboards.</div>
+    </div>
+    <div class="badge">Animated product walkthrough</div>
+  </div>
+
+  <!-- 2 PROBLEM -->
+  <div class="scene" id="s2">
+    <div class="tw">
+      <div class="prob">
+        <div class="pl" id="p1">A packing crew logs <b>a hundred boxes a day</b> on paper.</div>
+        <div class="pl" id="p2">Ops finds out what's inside them <b>tomorrow.</b></div>
+        <div class="pl" id="p3">And when something is already broken, nobody knows whose fault it is<br>until <b>the claim lands.</b></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 SURFACES -->
+  <div class="scene" id="s3">
+    <div class="hdr">One agent · <b>three surfaces</b></div>
+    <div class="surf">
+      <div class="sc" id="sc1"><div class="ic">🎧</div><h3>Earbuds</h3>
+        <p>The packer narrates while their hands are full. GPT‑Live‑1 listens, delegates every tool call, and answers in under two seconds.</p>
+        <div class="who">Packer</div></div>
+      <div class="sc" id="sc2"><div class="ic">💬</div><h3>Telegram group</h3>
+        <p>Damage cards land where ops already live — photo, assessment, and buttons that actually resolve the case.</p>
+        <div class="who">Ops team</div></div>
+      <div class="sc" id="sc3"><div class="ic">📦</div><h3>Private chat</h3>
+        <p>At handover the customer gets the same bot, scoped to their move, plus a manifest of every box.</p>
+        <div class="who">Customer</div></div>
+    </div>
+  </div>
+
+  <!-- 4 VOICE LOGGING -->
+  <div class="scene" id="s4">
+    <div class="hdr">Packing · move <b>TAN-001</b> · packer A</div>
+    <div class="row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="ph-top"><span class="ph-title">MoveMate</span><span class="ph-pill" id="pill"><span class="dot"></span>Listening</span></div>
+        <div class="wave live" id="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="tr" id="tr"></div>
+        <div class="camb" id="camb">📷  Take photo of damage</div>
+      </div>
+      <div class="feed">
+        <h4>ClickHouse · events <em id="lq">● live</em></h4>
+        <div class="rows" id="rows"></div>
+        <div class="boxcard" id="bc">
+          <div class="bh"><span class="bn" id="bcn">Box A12</span><span class="rm" id="bcr">Kitchen</span></div>
+          <div class="chips" id="chips"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 ROUND TRIP -->
+  <div class="scene" id="s5">
+    <div class="hdr">The round trip · <b>earbuds → ops → earbuds</b></div>
+    <div class="row">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="ph-top"><span class="ph-title">MoveMate</span><span class="ph-pill"><span class="dot"></span>Listening</span></div>
+        <div class="wave live"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="tr" id="tr2"></div>
+      </div>
+      <div class="tg">
+        <div class="tg-head"><div class="tg-av">📦</div><div><div class="n">Ops – Moves</div><div class="s">6 members, 2 online</div></div></div>
+        <div class="tg-body" id="tgb">
+          <div class="card" id="card">
+            <div class="card-h">⚠️ New damage · TAN-001 · Sofa</div>
+            <div class="card-b">
+              <div class="shot">
+                <svg viewBox="0 0 420 128" preserveAspectRatio="xMidYMid slice">
+                  <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="#4a5568"/><stop offset="1" stop-color="#2d3748"/></linearGradient></defs>
+                  <rect width="420" height="128" fill="#1a2029"/>
+                  <rect x="34" y="26" width="352" height="84" rx="13" fill="url(#g1)"/>
+                  <rect x="48" y="38" width="156" height="60" rx="9" fill="#556075" opacity=".75"/>
+                  <rect x="216" y="38" width="156" height="60" rx="9" fill="#556075" opacity=".75"/>
+                  <path d="M243 52 l13 11 -7 6 14 12 -9 5 12 10" stroke="#e2564a" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M243 52 l13 11 -7 6 14 12 -9 5 12 10" stroke="#ff9d94" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="262" cy="74" r="35" fill="none" stroke="#ef5d52" stroke-width="2" stroke-dasharray="6 5" opacity=".85"/>
+                </svg>
+                <div class="lbl">Packer photo · illustration</div>
+              </div>
+              <div class="fl"><span class="k">Assessment</span><span class="v">Six-inch tear along the back cushion seam.</span></div>
+              <div class="fl"><span class="k">Severity</span><span class="v">Minor · likely new</span></div>
+              <div class="fl"><span class="k">On survey?</span><span class="v no">No</span></div>
+              
+            </div>
+            <div class="acts">
+              <div class="btn" id="btn1">Wrap and load</div>
+              <div class="btn" id="btn2">Hold for inspection</div>
+              <div class="btn" id="btn3">Open claim</div>
+            </div>
+            <div class="decided" id="decided"><b>✓ Wrap and load — and claim opened</b>Decided by Priya (ops) · relayed to packer A</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <svg id="cursor" viewBox="0 0 24 24"><path d="M4 2 L4 20 L9 15.5 L12.5 22 L15.5 20.5 L12 14.5 L19 14 Z" fill="#fff" stroke="#111" stroke-width="1.2"/></svg>
+    <div class="ripple" id="ripple"></div>
+  </div>
+
+  <!-- 6 CUSTOMER -->
+  <div class="scene" id="s6">
+    <div class="hdr">Handover · <b>the same bot, scoped to one move</b></div>
+    <div class="row">
+      <div class="tg" style="width:400px">
+        <div class="tg-head"><div class="tg-av">📦</div><div><div class="n">MoveMate</div><div class="s">bot</div></div></div>
+        <div class="tg-body" id="ctg"></div>
+      </div>
+      <div class="man">
+        <div class="man-h"><div class="t1">Your move — TAN-001</div><div class="t2">Tan residence · 41 boxes · packed 12 Sep</div></div>
+        <div class="man-b" id="manb"></div>
+        <div class="cond" id="cond"><b>Condition report · 1 new item</b>Sofa — six-inch tear, back cushion seam. Not on the pre-move survey. Ops decision: wrap and load, claim opened.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7 CLOSE -->
+  <div class="scene" id="s7">
+    <div class="tw">
+      <div class="logo" id="k0" style="font-size:44px;opacity:0;transform:translateY(10px);transition:all .6s">Move<span>Mate</span></div>
+      <div class="kicker" id="k1">Same agent. Same tools. Same state.<br>
+        It meets the packer in their <b>earbuds</b>, ops in their <b>Telegram group</b>,<br>and the customer in a <b>private chat</b>.</div>
+      <div class="arch">
+        <div class="ab" id="a1"><div class="i2">🎧</div><div class="l2">GPT‑Live‑1</div></div>
+        <div class="arrow" id="ar1">→</div>
+        <div class="ab" id="a2"><div class="i2">⚙️</div><div class="l2">Agent core</div></div>
+        <div class="arrow" id="ar2">→</div>
+        <div class="ab" id="a3"><div class="i2">💬</div><div class="l2">CopilotKit Channels</div></div>
+        <div class="arrow" id="ar3">→</div>
+        <div class="ab" id="a4"><div class="i2">🗄️</div><div class="l2">ClickHouse</div></div>
+      </div>
+      <div class="stackline" id="sl">GPT‑LIVE‑1 · GPT‑5.6 LUNA · COPILOTKIT CHANNELS · CLICKHOUSE · TRIGGER.DEV · MODAL</div>
+    </div>
+  </div>
+
+  <div id="cap"></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const on=(id,c='on')=>{const e=$(id);if(e)e.classList.add(c)};
+const off=(id,c='on')=>{const e=$(id);if(e)e.classList.remove(c)};
+const scene=n=>{['s1','s2','s3','s4','s5','s6','s7'].forEach(s=>off(s));on('s'+n)};
+const cap=t=>{const c=$('cap');if(!t){c.classList.remove('on');return}c.innerHTML=t;c.classList.add('on')};
+
+function bubble(host,kind,text,delay){
+  const d=document.createElement('div');
+  d.className='b '+kind; d.textContent=text;
+  $(host).appendChild(d);
+  const tr=$(host); while(tr.scrollHeight>tr.clientHeight&&tr.children.length>1) tr.removeChild(tr.firstChild);
+  setTimeout(()=>d.classList.add('on'),delay||30);
+}
+function row(time,txt,cls){
+  const d=document.createElement('div');
+  d.className='r '+(cls||'');
+  d.innerHTML='<span class="t">'+time+'</span><span class="e">'+txt+'</span>';
+  $('rows').appendChild(d);
+  const r=$('rows'); while(r.children.length>7) r.removeChild(r.firstChild);
+  setTimeout(()=>d.classList.add('on'),30);
+}
+function chip(txt,frag){
+  const d=document.createElement('div');
+  d.className='chip'+(frag?' frag':''); d.textContent=txt;
+  $('chips').appendChild(d); setTimeout(()=>d.classList.add('on'),30);
+}
+function tgm(host,txt,out){
+  const d=document.createElement('div');
+  d.className='tgm'+(out?' out':''); d.textContent=txt;
+  $(host).appendChild(d); setTimeout(()=>d.classList.add('on'),30);
+}
+function mrow(bx,it,tag){
+  const d=document.createElement('div'); d.className='mrow';
+  d.innerHTML='<div><div class="bx">'+bx+'</div><div class="it">'+it+'</div></div>'+(tag?'<div class="tag2">'+tag+'</div>':'');
+  $('manb').appendChild(d); setTimeout(()=>d.classList.add('on'),30);
+}
+function pt(id){const sr=$('stage').getBoundingClientRect(),br=$(id).getBoundingClientRect(),k=sr.width/1280;
+  return[(br.left+br.width/2-sr.left)/k,(br.top+br.height/2-sr.top)/k]}
+function moveCursor(x,y){const c=$('cursor');c.style.left=x+'px';c.style.top=y+'px';
+  c.style.transition='left .85s cubic-bezier(.3,.6,.3,1),top .85s cubic-bezier(.3,.6,.3,1),opacity .3s'}
+function moveTo(id,dx,dy){const[x,y]=pt(id);moveCursor(x+(dx||0),y+(dy||0))}
+function click(x,y){const r=$('ripple');r.style.left=(x-8)+'px';r.style.top=(y-8)+'px';r.classList.remove('go');void r.offsetWidth;r.classList.add('go')}
+function clickOn(id){const[x,y]=pt(id);click(x,y)}
+
+// round-trip timer
+let clockT=0,tmrT0=0,tmrRun=false;
+function timerStart(at){tmrT0=(at!==undefined?at:clockT);tmrRun=true;on('timer');off('timer','done')}
+function timerTick(){if(tmrRun)$('timer').textContent=(clockT-tmrT0).toFixed(1)+'s  ·  defect \u2192 decision'}
+function timerStop(){tmrRun=false;
+  $('timer').textContent=(clockT-tmrT0).toFixed(1)+'s  ·  round trip closed';on('timer','done')}
+
+// ---------------- TIMELINE (seconds) ----------------
+const T=[
+[0.4,()=>{scene(1)}],
+[1.2,()=>cap('<b>MoveMate</b> — a voice agent for movers and packers')],
+[5.2,()=>cap('')],
+[6.0,()=>{scene(2)}],
+[6.8,()=>{on('p1');cap('A packing crew logs a hundred boxes a day on paper.')}],
+[10.0,()=>{on('p2');cap("Ops finds out what's inside them tomorrow.")}],
+[13.0,()=>{on('p3');cap("And when something is already damaged, nobody knows whose fault it is until the claim lands.")}],
+[17.0,()=>cap('')],
+[17.6,()=>{scene(3)}],
+[18.2,()=>{on('sc1');cap("MoveMate is <b>one agent</b> that lives in three places.")}],
+[20.4,()=>{on('sc2')}],
+[22.0,()=>{on('sc3');cap("The packer's <b>earbuds</b>. The ops team's <b>Telegram group</b>. The customer's <b>private chat</b>.")}],
+[25.6,()=>cap('')],
+
+// ---- voice logging ----
+[26.2,()=>{scene(4);cap('He taps start. The phone goes in his pocket and stays there.')}],
+[28.0,()=>row('09:14:02','session_started · packer A')],
+[29.4,()=>cap('')],
+[30.0,()=>bubble('tr','me','Box twelve, kitchen. Glasses, the blender, two chopping boards. Fragile.')],
+[30.4,()=>cap('<b>"Box twelve, kitchen. Glasses, the blender, two chopping boards. Fragile."</b>')],
+[32.6,()=>{row('09:14:11','item_logged · A12 · glasses');on('bc');$('bcn').textContent='Box A12';$('bcr').textContent='Kitchen';chip('glasses')}],
+[33.1,()=>{row('09:14:11','item_logged · A12 · blender');chip('blender')}],
+[33.6,()=>{row('09:14:11','item_logged · A12 · chopping boards ×2');chip('chopping boards ×2');chip('FRAGILE',1)}],
+[34.2,()=>{bubble('tr','ag','Twelve, kitchen, three items, fragile.');cap('<i>"Twelve, kitchen, three items, fragile."</i>  —  1.4 seconds, no screen touched')}],
+[37.4,()=>cap('')],
+[38.2,()=>{bubble('tr','me','Actually put the phone chargers in that one too.');cap('<b>"Actually put the phone chargers in that one too."</b>')}],
+[40.4,()=>{row('09:14:19','item_logged · A12 · phone chargers');chip('phone chargers')}],
+[41.0,()=>{bubble('tr','ag','Added — four items.');cap('A mid-sentence correction, handled. This is a conversation, not a form.')}],
+[44.6,()=>cap('')],
+[45.4,()=>{bubble('tr','me','Where did the router go?');cap('<b>"Where did the router go?"</b>')}],
+[47.2,()=>row('09:14:26','query_asked · find_item "router"')],
+[48.0,()=>{bubble('tr','ag','Box A9, study.');cap('<i>"Box A9, study."</i>  —  every box logged today is queryable, by voice, mid-lift')}],
+[51.6,()=>cap('')],
+
+// ---- damage ----
+[52.4,()=>{bubble('tr','me','The oak dresser has a scratch on the left side.');cap('<b>"The oak dresser has a scratch on the left side."</b>')}],
+[54.6,()=>row('09:15:03','check_survey · MATCH "oak dresser: scratch left side"','ok')],
+[55.4,()=>{bubble('tr','ag',"Noted — that one's on the survey.");cap("<i>\"Noted — that one's on the survey.\"</i>  —  pre-existing damage, recognised, no escalation")}],
+[58.8,()=>cap('')],
+[59.6,()=>{bubble('tr','me','The sofa has a tear on the back cushion.');cap('<b>"The sofa has a tear on the back cushion."</b>');timerStart(59.6)}],
+[61.8,()=>row('09:15:22','check_survey · NO MATCH · sofa','warn')],
+[62.6,()=>{bubble('tr','ag','Not on the survey. Grab a photo.');on('camb');cap('<i>"Not on the survey. Grab a photo."</i>')}],
+[65.4,()=>{row('09:15:28','photo_received · 1 image','warn');cap('He taps once. The photo goes to GPT‑5.6 Luna — not into the voice session.')}],
+[67.6,()=>{row('09:15:31','assessment_done · tear · minor · likely_new','warn');off('camb')}],
+[68.6,()=>{bubble('tr','ag','Six-inch tear, minor, looks new. Logging it.');cap('<i>"Six-inch tear, minor, looks new. Logging it."</i>')}],
+[71.4,()=>cap('')],
+
+// ---- round trip ----
+[72.2,()=>{scene(5);
+  bubble('tr2','me','The sofa has a tear on the back cushion.');}],
+[72.8,()=>bubble('tr2','ag','Six-inch tear, minor, looks new. Logging it.')],
+[73.6,()=>cap('Ops never opened a dashboard. The card came to where they already are.')],
+[74.6,()=>on('card')],
+[77.6,()=>cap('Photo, assessment, survey verdict — and three buttons that actually resolve the case.')],
+[81.0,()=>{cap('');on('cursor');moveTo('card',120,-60)}],
+[82.4,()=>moveTo('btn1',18,0)],
+[83.6,()=>{on('btn1','hot')}],
+[84.2,()=>{clickOn('btn1');on('btn2','gone');on('btn3','gone');cap('Priya taps <b>Wrap and load</b>.')}],
+[85.0,()=>off('cursor')],
+[85.6,()=>on('decided')],
+[86.6,()=>{bubble('tr2','ag','Ops says wrap and load. Claim opened.');timerStop();
+  cap('<i>"Ops says wrap and load. Claim opened."</i>  —  spoken into his earbuds, in the same session')}],
+[91.4,()=>cap('Twenty-seven seconds, defect to decision. Nobody typed. Nobody put the box down.')],
+[95.0,()=>{cap('');off('timer')}],
+
+// ---- customer ----
+[95.8,()=>{scene(6);cap('At handover the customer gets a deep link to the same bot — scoped to their move only.')}],
+[97.0,()=>{mrow('Box A9','router, cables, desk lamp','STUDY')}],
+[97.5,()=>{mrow('Box A12','glasses, blender, chopping boards ×2, phone chargers','FRAGILE')}],
+[98.0,()=>{mrow('Box A13','plates, bowls, cutlery tray','KITCHEN')}],
+[98.5,()=>{on('cond')}],
+[99.4,()=>tgm('ctg','Hi — I have your move. Ask me anything.')],
+[100.6,()=>{tgm('ctg','did my TV get packed?',1);cap('<b>"Did my TV get packed?"</b>')}],
+[102.4,()=>tgm('ctg','Yes — box A7, living room, marked fragile. Packed at 10:42 and logged with a photo.')],
+[104.0,()=>cap('Every answer comes from the same tools the packer used. One source of truth.')],
+[108.0,()=>cap('')],
+
+// ---- close ----
+[108.8,()=>{scene(7);$('k0').style.opacity=1;$('k0').style.transform='none'}],
+[109.6,()=>on('k1')],
+[110.4,()=>on('a1')],[111.0,()=>on('ar1')],[111.4,()=>on('a2')],
+[112.0,()=>on('ar2')],[112.4,()=>on('a3')],[113.0,()=>on('ar3')],[113.4,()=>on('a4')],
+[114.4,()=>{on('sl');cap('No chatbox could carry that round trip alone.')}],
+[118.4,()=>cap('')],
+];
+
+// scale to viewport
+function fit(){const s=Math.min(innerWidth/1280,innerHeight/720);
+  $('stage').style.transform='scale('+s+')';$('stage').style.transformOrigin='center center'}
+addEventListener('resize',fit);fit();
+
+let i=0,t0=0;
+function loop(now){
+  const t=(now-t0)/1000; clockT=t; timerTick();
+  while(i<T.length&&T[i][0]<=t){try{T[i][1]()}catch(e){console.error(e)}i++}
+  if(i<T.length||t<120.5)requestAnimationFrame(loop);
+}
+const seek=parseFloat(new URLSearchParams(location.search).get('t')||'0');
+requestAnimationFrame(n=>{t0=n-seek*1000;loop(n)});
+</script>
