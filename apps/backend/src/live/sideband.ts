@@ -39,6 +39,9 @@ export interface AttachInput {
 export async function attachSideband(input: AttachInput): Promise<void> {
   let attempts = 0;
   let closedByUs = false;
+  // Distinguishes "the model heard nothing" from "the model heard and chose not
+  // to act" — without this the two look identical in the logs.
+  let audioSeen = false;
 
   const connect = (): void => {
     const ws = new WebSocket(ATTACH_URL(input.sessionId), {
@@ -95,6 +98,11 @@ export async function attachSideband(input: AttachInput): Promise<void> {
       const inner = envelope.type === "response.event" ? envelope.event : envelope;
       if (!inner?.type) return;
       noteEventType(envelope.type === "response.event" ? `response.event/${inner.type}` : inner.type);
+
+      if (!audioSeen && String(inner.type).includes("transcript")) {
+        audioSeen = true;
+        console.log(`[live] audio flowing for ${input.moveId} (${input.sessionId})`);
+      }
 
       if (inner.type === "session.closed") {
         // The packer pressed Stop or the page went away. The session id is dead,

@@ -10,6 +10,7 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
   const [error, setError] = useState<string>("");
   const [paused, setPaused] = useState(false);
   const [level, setLevel] = useState(0);
+  const [rtc, setRtc] = useState<RTCPeerConnectionState | "">("");
   const [cameraFor, setCameraFor] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [lastUpload, setLastUpload] = useState<string>("");
@@ -26,6 +27,13 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
   }, [paused]);
 
   const start = useCallback(async () => {
+    // Pressing Start twice used to leave two live sessions on the same move,
+    // each with its own sideband, and audio attached to only one of them.
+    pcRef.current?.close();
+    pcRef.current = null;
+    for (const t of streamRef.current?.getTracks() ?? []) t.stop();
+    streamRef.current = null;
+
     setStatus("connecting");
     setError("");
     try {
@@ -34,7 +42,11 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
       });
       streamRef.current = stream;
 
-      const pc = new RTCPeerConnection();
+      // Without a STUN server the offer carries host candidates only, which is
+      // fragile on mobile networks.
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      });
       pcRef.current = pc;
       for (const track of stream.getTracks()) pc.addTrack(track, stream);
 
@@ -64,7 +76,20 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
 
       meter(stream, setLevel);
       wakeRef.current = await requestWakeLock();
-      setStatus("live");
+
+      // "live" means the media path is actually up. Reporting it on the SDP
+      // answer alone was a lie: the session existed but no audio ever flowed,
+      // and the page looked fine while the packer talked to nothing.
+      pc.onconnectionstatechange = () => {
+        setRtc(pc.connectionState);
+        if (pc.connectionState === "connected") setStatus("live");
+        if (pc.connectionState === "failed" || pc.connectionState === "disconnected") {
+          setStatus("error");
+          setError(`Media connection ${pc.connectionState}. Tap Stop, then Start again.`);
+        }
+      };
+      setRtc(pc.connectionState);
+      if (pc.connectionState === "connected") setStatus("live");
     } catch (err) {
       setStatus("error");
       setError(err instanceof Error ? err.message : String(err));
@@ -129,6 +154,7 @@ export default function PackClient({ token, apiUrl }: { token: string; apiUrl: s
           }`}
         >
           {status}
+          {rtc && rtc !== "connected" ? ` · ${rtc}` : ""}
         </span>
       </header>
 
@@ -206,7 +232,7 @@ function iceSettled(pc: RTCPeerConnection): Promise<void> {
     };
     pc.addEventListener("icegatheringstatechange", done);
     // Don't stall the session on a slow STUN server.
-    setTimeout(resolve, 1500);
+    setTimeout(resolve, 5000);
   });
 }
 
